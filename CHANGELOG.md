@@ -5,6 +5,18 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Job `build` wisiał 50+ minut na kroku instalacji CODESYS Development
+  System: flaga `/S` (NSIS) była błędna dla tego instalatora
+  (InstallShield-wrapped MSI) - prawdopodobnie próbował pokazać UI, na
+  które nikt w headless CI nie mógł kliknąć. Poprawiono na `/s /v/qn`
+  (InstallShield silent + quiet-MSI) w `Install-CodesysDevSystem.ps1` i
+  `Install-CodesysRuntime.ps1`. Dodano `scripts/Start-SilentInstall.ps1`:
+  wspólna logika uruchamiania instalatora z twardym timeoutem (domyślnie
+  15 min) - zła flaga silent w przyszłości przerwie job czytelnym błędem
+  zamiast wisieć aż do limitu czasu joba. Zawieszony run CI ręcznie
+  anulowany (`gh run cancel`).
+
+### Fixed
 - `scripts/Expand-Installer.ps1`: instalator CODESYS Development System to
   pakiet InstallShield, który poza właściwym `.exe` zawiera dodatkowe
   instalatory-wymagania (VC++ redist, .NET, silnik InstallShield) w

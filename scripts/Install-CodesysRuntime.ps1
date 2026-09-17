@@ -23,12 +23,12 @@ if (-not $existing) {
     & (Join-Path $PSScriptRoot "Assert-ValidExe.ps1") -Path $InstallerPath
 
     Write-Host "== Installing CODESYS Control Win V3 x64 =="
-    # NSIS-based installer - verify the exact silent-install switch for your
-    # downloaded build with: & $InstallerPath /?
-    $proc = Start-Process -FilePath $InstallerPath -ArgumentList "/S" -Wait -PassThru
-    if ($proc.ExitCode -ne 0) {
-        throw "CODESYS Control Win V3 installer failed with exit code $($proc.ExitCode)"
-    }
+    # InstallShield-wrapped installer (same family as the Development
+    # System one - see ISSetupPrerequisites next to it). /s triggers
+    # InstallShield's own silent mode, /v/qn passes "quiet, no UI" through
+    # to the underlying MSI. Verify with & $InstallerPath /? if this ever
+    # stops working for a newer build.
+    & (Join-Path $PSScriptRoot "Start-SilentInstall.ps1") -InstallerPath $InstallerPath -ArgumentList @("/s", "/v/qn")
 
     $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
     if (-not $existing) {

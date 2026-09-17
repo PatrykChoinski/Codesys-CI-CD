@@ -26,12 +26,11 @@ if (-not (Test-Path $InstallerPath)) {
 & (Join-Path $PSScriptRoot "Assert-ValidExe.ps1") -Path $InstallerPath
 
 Write-Host "== Installing CODESYS Development System =="
-# NSIS-based installer - verify the exact silent-install switch for your
-# downloaded build with: & $InstallerPath /?
-$proc = Start-Process -FilePath $InstallerPath -ArgumentList "/S" -Wait -PassThru
-if ($proc.ExitCode -ne 0) {
-    throw "CODESYS Development System installer failed with exit code $($proc.ExitCode)"
-}
+# InstallShield-wrapped installer (see ISSetupPrerequisites next to it) -
+# /s triggers InstallShield's own silent mode, /v/qn passes "quiet, no UI"
+# through to the underlying MSI. Verify with & $InstallerPath /? if this
+# ever stops working for a newer build.
+& (Join-Path $PSScriptRoot "Start-SilentInstall.ps1") -InstallerPath $InstallerPath -ArgumentList @("/s", "/v/qn")
 
 if (-not (Test-Path $CodesysExe)) {
     throw "Install reported success but CODESYS.exe was not found at $CodesysExe - check the actual install path/version."
