@@ -4,6 +4,25 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- Runtime testowy przeniesiony z kontenera Ubuntu (`CODESYS Control for Linux SL`)
+  na kontener Windows z `CODESYS Control Win V3 x64` (`docker/Dockerfile`,
+  `docker/entrypoint.ps1`, `docker/docker-compose.yml`, `docker/README.md`
+  przepisane pod Windows containers).
+- Pipeline CI rozbity z jednego joba na trzy oddzielne joby: `build`, `deploy`,
+  `test` (`.github/workflows/codesys-ci.yml`), każdy z własnym raportem JUnit.
+  Zastąpiono `scripts/codesys_ci.py` + `scripts/Invoke-CodesysCI.ps1` przez:
+  `scripts/codesys_build.py` + `Invoke-CodesysBuild.ps1` (kompilacja),
+  `scripts/codesys_deploy.py` + `Invoke-CodesysDeploy.ps1` (obraz, kontener,
+  login/download/start), `scripts/codesys_test.py` + `Invoke-CodesysTest.ps1`
+  (weryfikacja stanu RUN + teardown kontenera).
+
+### Added
+- Główny `README.md` opisujący architekturę pipeline'u, uzasadnienie decyzji
+  (Windows-only IDE, runtime w kontenerze Windows), strukturę repo, etapy CI,
+  wymagania środowiska i ograniczenia (jeden self-hosted runner na etapy
+  deploy/test).
+
 ### Added
 - `.gitignore` ignorujący pliki robocze CODESYS (`*.opt`, `*.~u`, `*.precompilecache`).
 - `CLAUDE.md` z zasadami pracy (commit lokalny po każdej zmianie, push tylko na żądanie).

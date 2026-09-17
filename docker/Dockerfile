@@ -1,54 +1,53 @@
-# CODESYS Control for Linux SL runtime image (target: CODESYS V3.5 SP22)
+# CODESYS Control Win V3 runtime image (target: CODESYS V3.5 SP22)
 #
-# CODESYS Control for Linux SL is NOT publicly downloadable - it requires a
+# This is a WINDOWS container (needs Docker Desktop / Docker Engine in
+# "Windows containers" mode, running on a Windows host whose build matches
+# the base image below - or Hyper-V isolation to bridge a mismatch).
+#
+# CODESYS Control Win V3 is NOT publicly downloadable - it requires a
 # CODESYS Store account and license agreement. Before building this image:
 #
 #   1. Log in to https://store.codesys.com with your account.
-#   2. Download "CODESYS Control for Linux SL" matching V3.5 SP22
-#      (package name looks like codesyscontrol-diagnosis-<arch>-<version>.deb
-#      or a self-extracting *.sh / *.tar.gz installer, depending on the store).
-#   3. Place the downloaded installer file into docker/installers/
+#   2. Download "CODESYS Control Win V3 x64" matching V3.5 SP22.
+#   3. Place the downloaded installer (e.g.
+#      CODESYSControlWinV3x64Setup.exe) into docker/installers/
 #      and pass its filename as the CODESYS_RTE_INSTALLER build arg.
 #
-# Example:
-#   docker build --build-arg CODESYS_RTE_INSTALLER=codesyscontrol_linux_x64_3.5.22.0.deb \
-#                -t codesys-rte:3.5.22 -f docker/Dockerfile docker
+# Example (from repo root, Windows container mode):
+#   docker build --build-arg CODESYS_RTE_INSTALLER=CODESYSControlWinV3x64Setup.exe `
+#                -t codesys-rte-win:3.5.22 -f docker\Dockerfile docker
 #
-# The runtime runs WITHOUT a runtime license in demo mode (limited running
-# time per session, restart required afterwards) unless a valid license/
-# container-license is provided - sufficient for CI smoke tests.
+# Without a runtime license, CODESYS Control Win V3 runs in demo mode
+# (limited continuous running time per session) - sufficient for CI
+# smoke tests.
 
-FROM ubuntu:latest
+# escape=`
+ARG WINDOWS_BASE_TAG=ltsc2022
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_BASE_TAG}
+
+SHELL ["powershell", "-NoProfile", "-Command", "$ErrorActionPreference='Stop';"]
 
 ARG CODESYS_RTE_INSTALLER
-ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR C:\codesys-installer
+COPY installers/${CODESYS_RTE_INSTALLER} .\installer.exe
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        iproute2 \
-        net-tools \
-        libssl3 \
-        libcap2-bin \
-        procps \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /opt/codesys-installer
-COPY installers/${CODESYS_RTE_INSTALLER} ./installer.deb
-
-# Install the runtime. The official installer registers a SysV init script
-# under /etc/init.d/codesyscontrol - we do not rely on systemd since it is
-# not PID 1 inside the container.
-RUN dpkg -i ./installer.deb || apt-get install -f -y \
-    && rm -rf /opt/codesys-installer
+# Silent install. CODESYS installers are NSIS-based - verify the exact
+# silent-install switches for your downloaded build with:
+#   installer.exe /?
+# Common switches are /S (silent) and /D=<install dir> (must be last arg,
+# no quotes). Adjust below if your installer differs (e.g. .msi package
+# would use msiexec /i installer.msi /qn instead).
+RUN Start-Process -FilePath .\installer.exe -ArgumentList '/S' -Wait -PassThru | `
+        ForEach-Object { if ($_.ExitCode -ne 0) { throw \"Installer failed with exit code $($_.ExitCode)\" } } ; `
+    Remove-Item -Recurse -Force C:\codesys-installer
 
 # Gateway (engineering/download traffic), OPC UA, WebVisu/webserver
 EXPOSE 1217 4840 8080
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY entrypoint.ps1 C:\entrypoint.ps1
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=6 \
-    CMD /etc/init.d/codesyscontrol status || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --retries=6 `
+    CMD powershell -NoProfile -Command `
+        "if ((Get-Service -Name 'CODESYSControlWinV3x64' -ErrorAction SilentlyContinue).Status -eq 'Running') { exit 0 } else { exit 1 }"
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\entrypoint.ps1"]

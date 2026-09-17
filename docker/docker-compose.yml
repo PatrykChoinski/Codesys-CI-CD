@@ -1,7 +1,9 @@
 # Local helper for manual testing of the runtime image.
+# Requires Docker Desktop in "Windows containers" mode.
+#
 # Usage:
-#   docker compose -f docker/docker-compose.yml build \
-#       --build-arg CODESYS_RTE_INSTALLER=<installer-filename>
+#   $env:CODESYS_RTE_INSTALLER = "CODESYSControlWinV3x64Setup.exe"
+#   docker compose -f docker/docker-compose.yml build
 #   docker compose -f docker/docker-compose.yml up -d
 services:
   codesys-rte:
@@ -10,8 +12,9 @@ services:
       dockerfile: Dockerfile
       args:
         CODESYS_RTE_INSTALLER: ${CODESYS_RTE_INSTALLER}
-    image: codesys-rte:3.5.22
+    image: codesys-rte-win:3.5.22
     container_name: codesys-rte
+    platform: windows
     ports:
       - "1217:1217"
       - "4840:4840"

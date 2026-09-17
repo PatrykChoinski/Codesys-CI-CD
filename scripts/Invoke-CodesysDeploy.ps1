@@ -1,34 +1,33 @@
 <#
 .SYNOPSIS
-    Orchestrates the CODESYS CI pipeline on a Windows self-hosted runner:
-    builds/starts the Ubuntu CODESYS runtime container, drives CODESYS
-    Scripting to compile+deploy+smoke-test the project against it, then
-    tears the container down and surfaces a JUnit report.
-
-.PARAMETER CodesysExe
-    Full path to CODESYS.exe (Development System) matching V3.5 SP22.
-
-.PARAMETER ProjectPath
-    Full path to CICD.project.
+    DEPLOY stage: builds/starts the CODESYS Control Win V3 runtime Windows
+    container, then logs in, downloads and starts the application on it
+    via CODESYS Scripting. Leaves the container RUNNING for the TEST stage
+    (torn down there, not here).
 
 .PARAMETER CodesysRteInstaller
-    Filename of the CODESYS Control for Linux SL installer placed under
+    Filename of the CODESYS Control Win V3 x64 installer placed under
     docker/installers/ (see docker/Dockerfile header for how to obtain it).
 #>
 param(
     [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [Parameter(Mandatory = $true)][string]$CodesysRteInstaller,
-    [string]$ImageTag = "codesys-rte:3.5.22",
+    [string]$ImageTag = "codesys-rte-win:3.5.22",
     [string]$ContainerName = "codesys-rte-ci",
     [int]$GatewayPort = 1217,
-    [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-codesys-ci.xml")
+    [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-deploy.xml")
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Join-Path $PSScriptRoot ".."
 $dockerDir = Join-Path $repoRoot "docker"
 New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
+
+$serverOsType = (docker info --format '{{.OSType}}').Trim()
+if ($serverOsType -ne "windows") {
+    throw "Docker is in '$serverOsType' containers mode - switch Docker Desktop/Engine to Windows containers first (see docker/README.md)."
+}
 
 Write-Host "== Building CODESYS runtime image =="
 docker build --build-arg "CODESYS_RTE_INSTALLER=$CodesysRteInstaller" `
@@ -55,30 +54,32 @@ try {
         throw "CODESYS runtime container did not become healthy"
     }
 
-    Write-Host "== Running CODESYS Scripting (compile, deploy, smoke test) =="
+    Write-Host "== Running CODESYS Scripting (login, download, start) =="
     $scriptArgs = "$ProjectPath;127.0.0.1;$GatewayPort;$ReportPath"
     & $CodesysExe --profile "CODESYS V3.5 SP22" --noUI `
-        "--runscript=$(Join-Path $PSScriptRoot 'codesys_ci.py')" `
+        "--runscript=$(Join-Path $PSScriptRoot 'codesys_deploy.py')" `
         --scriptargs $scriptArgs
     $codesysExit = $LASTEXITCODE
 
     if (Test-Path $ReportPath) {
-        Write-Host "== Test report =="
+        Write-Host "== Deploy report =="
         Get-Content $ReportPath
     } else {
         Write-Warning "No report generated at $ReportPath"
     }
 
     if ($codesysExit -ne 0) {
-        throw "CODESYS scripting reported failures (exit code $codesysExit)"
+        throw "Deploy failed (exit code $codesysExit)"
     }
 }
-finally {
-    Write-Host "== Collecting runtime logs =="
-    docker logs $ContainerName 2>&1 | Out-File (Join-Path (Split-Path $ReportPath) "codesys-rte.log")
-
-    Write-Host "== Tearing down container =="
+catch {
+    # Deploy failed - no point leaving the container around for a TEST
+    # stage that won't run. Successful deploys leave it running; the TEST
+    # stage is responsible for tearing it down.
+    Write-Host "== Deploy failed, tearing down container =="
+    docker logs $ContainerName 2>&1 | Out-File (Join-Path (Split-Path $ReportPath) "codesys-rte-deploy.log")
     docker rm -f $ContainerName | Out-Null
+    throw
 }
 
-Write-Host "CODESYS CI pipeline finished successfully."
+Write-Host "Deploy stage finished successfully. Container '$ContainerName' left running for the test stage."
