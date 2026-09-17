@@ -1,0 +1,9 @@
+# CODESYS working files
+*.opt
+*.~u
+*.precompilecache
+
+# CI artifacts
+/build/
+/reports/
+*.log
