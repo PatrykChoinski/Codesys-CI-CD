@@ -13,11 +13,10 @@ $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 Write-Host "== Compiling project =="
-$scriptArgs = "$ProjectPath;$ReportPath"
 $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
     -Profile "CODESYS V3.5 SP22" `
     -ScriptPath (Join-Path $PSScriptRoot "codesys_build.py") `
-    -ScriptArgs $scriptArgs
+    -ScriptArguments @($ProjectPath, $ReportPath)
 
 if (Test-Path $ReportPath) {
     Write-Host "== Build report =="

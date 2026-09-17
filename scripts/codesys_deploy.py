@@ -1,32 +1,38 @@
 """
 CODESYS Scripting entry point for the DEPLOY stage.
 
-Invoked headlessly on the Windows runner, after the runtime service is
-already installed and running:
-
-    "C:\\Program Files\\CODESYS 3.5.22.30\\CODESYS\\Common\\CODESYS.exe" ^
-        --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_deploy.py ^
-        --scriptargs "<project_path>;<device_address>;<gateway_port>;<report_path>"
+Invoked headlessly, after the runtime service is already installed and
+running on this same machine:
+    CODESYS.exe --profile="CODESYS V3.5 SP22" --runscript="scripts\\codesys_deploy.py" ^
+        --scriptargs:'<project_path> <report_path>' --noUI
 
 Responsibilities:
   1. Open the (already built) project.
-  2. Point the active application's communication channel at the
-     CODESYS Control Win V3 runtime running on this same runner
-     (device_address:gateway_port, installed directly - no container).
-  3. Log in, download the boot application, start it.
-  4. Log out (the application keeps running on the device independently
+  2. Log in to the runtime, forcing a full download, and start the
+     application.
+  3. Log out (the application keeps running on the device independently
      of the engineering session) and write a JUnit-style XML report.
 
-Deliberately does not verify RUN state here - that's the TEST stage's job,
-kept separate so "deploy failed" and "smoke test failed" are distinguishable
-in CI.
+No device address is set here: the project's device is assumed to
+already be configured to talk to the local runtime (127.0.0.1), the same
+setup used when the project was created/tested locally against a local
+CODESYS Control Win V3/SL instance - CI runs the runtime on the same
+machine as the engineering session, so this should just work.
+
+Deliberately does not verify RUN state here - that's the TEST stage's
+job, kept separate so "deploy failed" and "smoke test failed" are
+distinguishable in CI.
+
+API confirmed against an official CODESYS Forge example
+(create_online_application/OnlineChangeOption/ApplicationState):
+https://forge.codesys.com/forge/redirect/forum?lan=en&thread=1890
 """
 
 import sys
 import time
 import traceback
 
-from scriptengine import projects, system  # provided by CODESYS at runtime
+from scriptengine import *
 
 
 def write_junit(report_path, testsuite_name, cases):
@@ -52,21 +58,18 @@ def _escape(text):
 
 
 def main():
-    args = system.get_script_args() if hasattr(system, "get_script_args") else sys.argv[1:]
-    project_path, device_address, gateway_port, report_path = args[0].split(";")
-    gateway_port = int(gateway_port)
+    project_path, report_path = sys.argv[1], sys.argv[2]
 
     cases = []
     t0 = time.time()
     try:
         project = projects.open(project_path)
         app = project.active_application
-
-        app.get_device().set_communication_address(device_address, gateway_port)
-        app.online_change_option = "IgnoreOnlineChange"
-        app.login(update_bootproject=True)
-        app.start()
-        app.logout()
+        onlineapp = online.create_online_application(app)
+        onlineapp.login(OnlineChangeOption.Try, True)
+        if not onlineapp.application_state == ApplicationState.run:
+            onlineapp.start()
+        onlineapp.logout()
 
         cases.append({
             "name": "login_download_start",
@@ -74,7 +77,7 @@ def main():
             "message": "",
             "time": time.time() - t0,
         })
-        system.exit_code = 0
+        exit_code = 0
     except Exception:  # noqa: BLE001
         cases.append({
             "name": "login_download_start",
@@ -82,9 +85,10 @@ def main():
             "message": traceback.format_exc(),
             "time": time.time() - t0,
         })
-        system.exit_code = 1
+        exit_code = 1
 
     write_junit(report_path, "codesys-deploy", cases)
+    system.exit(exit_code)
 
 
 main()

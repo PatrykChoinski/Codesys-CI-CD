@@ -8,14 +8,20 @@
     Path to the previously downloaded/cached installer executable.
 #>
 param(
-    [Parameter(Mandatory = $true)][string]$InstallerPath,
-    [string]$ServiceName = "CODESYSControlWinV3x64"
+    [Parameter(Mandatory = $true)][string]$InstallerPath
 )
 
 $ErrorActionPreference = "Stop"
 
-$existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-if (-not $existing) {
+function Find-CodesysControlService {
+    # The exact internal service Name isn't confirmed against official
+    # docs, but its display name reliably contains "CODESYS Control" -
+    # resolve dynamically instead of guessing the short Name.
+    Get-Service | Where-Object { $_.DisplayName -like "*CODESYS Control*" } | Select-Object -First 1
+}
+
+$service = Find-CodesysControlService
+if (-not $service) {
     if (-not (Test-Path $InstallerPath)) {
         throw "Installer not found at $InstallerPath"
     }
@@ -30,23 +36,24 @@ if (-not $existing) {
     # stops working for a newer build.
     & (Join-Path $PSScriptRoot "Start-SilentInstall.ps1") -InstallerPath $InstallerPath -ArgumentList @("/s", "/v/qn")
 
-    $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    if (-not $existing) {
-        throw "Install reported success but service '$ServiceName' was not found - check the installed service name."
+    $service = Find-CodesysControlService
+    if (-not $service) {
+        throw "Install reported success but no service with display name like '*CODESYS Control*' was found - check the installed service name (Get-Service | Format-Table Name, DisplayName)."
     }
 } else {
-    Write-Host "Service '$ServiceName' already installed, skipping install."
+    Write-Host "Service '$($service.Name)' already installed, skipping install."
 }
 
-Set-Service -Name $ServiceName -StartupType Automatic
-Start-Service -Name $ServiceName
+$serviceName = $service.Name
+Set-Service -Name $serviceName -StartupType Automatic
+Start-Service -Name $serviceName
 
 $deadline = (Get-Date).AddSeconds(60)
-while ((Get-Service -Name $ServiceName).Status -ne "Running") {
+while ((Get-Service -Name $serviceName).Status -ne "Running") {
     if ((Get-Date) -gt $deadline) {
-        throw "Service '$ServiceName' did not reach Running state within 60s"
+        throw "Service '$serviceName' did not reach Running state within 60s"
     }
     Start-Sleep -Seconds 2
 }
 
-Write-Host "CODESYS Control Win V3 x64 runtime is running."
+Write-Host "CODESYS Control Win V3 x64 runtime ('$serviceName') is running."

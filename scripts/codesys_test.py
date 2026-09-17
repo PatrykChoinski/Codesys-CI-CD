@@ -1,31 +1,28 @@
 """
 CODESYS Scripting entry point for the TEST stage (smoke test).
 
-Invoked headlessly on the Windows runner, after the DEPLOY stage has
-downloaded and started the application on the runtime running on the
-same machine:
-
-    "C:\\Program Files\\CODESYS 3.5.22.30\\CODESYS\\Common\\CODESYS.exe" ^
-        --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_test.py ^
-        --scriptargs "<project_path>;<device_address>;<gateway_port>;<report_path>"
+Invoked headlessly, after the DEPLOY stage has downloaded and started the
+application:
+    CODESYS.exe --profile="CODESYS V3.5 SP22" --runscript="scripts\\codesys_test.py" ^
+        --scriptargs:'<project_path> <report_path>' --noUI
 
 Responsibilities:
-  1. Open the project, log in to the already-running application in
-     monitor-only mode (no re-download).
-  2. Verify the device reports RUN state.
+  1. Open the project, log in to the already-running application without
+     forcing a re-download.
+  2. Verify the application reports RUN state.
   3. Log out and write a JUnit-style XML report consumed by the CI job.
 
-Extend this script with additional test cases (reading/forcing symbols,
-running a CODESYS Unit Testing Framework suite, etc.) as needed - each
-should append its own entry to `cases` so it shows up as its own testcase
-in the JUnit report.
+Extend this script with additional test cases (reading/forcing symbols
+via onlineapp.read_value(...), running a CODESYS Unit Testing Framework
+suite, etc.) as needed - each should append its own entry to `cases` so
+it shows up as its own testcase in the JUnit report.
 """
 
 import sys
 import time
 import traceback
 
-from scriptengine import projects, system  # provided by CODESYS at runtime
+from scriptengine import *
 
 
 def write_junit(report_path, testsuite_name, cases):
@@ -51,32 +48,27 @@ def _escape(text):
 
 
 def main():
-    args = system.get_script_args() if hasattr(system, "get_script_args") else sys.argv[1:]
-    project_path, device_address, gateway_port, report_path = args[0].split(";")
-    gateway_port = int(gateway_port)
+    project_path, report_path = sys.argv[1], sys.argv[2]
 
     cases = []
-
-    project = projects.open(project_path)
-    app = project.active_application
-    app.get_device().set_communication_address(device_address, gateway_port)
-
     t0 = time.time()
     try:
-        app.login(update_bootproject=False)
+        project = projects.open(project_path)
+        app = project.active_application
+        onlineapp = online.create_online_application(app)
+        onlineapp.login(OnlineChangeOption.Try, False)
 
-        state = app.get_device_state() if hasattr(app, "get_device_state") else None
-        is_running = state is None or str(state).lower() in ("run", "running")
+        is_running = onlineapp.application_state == ApplicationState.run
 
         cases.append({
             "name": "plc_in_run_state",
             "status": "pass" if is_running else "fail",
-            "message": "" if is_running else "PLC did not report RUN state (state=%s)" % state,
+            "message": "" if is_running else "Application state was %s, expected run" % onlineapp.application_state,
             "time": time.time() - t0,
         })
 
-        app.logout()
-        system.exit_code = 0 if is_running else 1
+        onlineapp.logout()
+        exit_code = 0 if is_running else 1
     except Exception:  # noqa: BLE001
         cases.append({
             "name": "plc_in_run_state",
@@ -84,9 +76,10 @@ def main():
             "message": traceback.format_exc(),
             "time": time.time() - t0,
         })
-        system.exit_code = 1
+        exit_code = 1
 
     write_junit(report_path, "codesys-test", cases)
+    system.exit(exit_code)
 
 
 main()

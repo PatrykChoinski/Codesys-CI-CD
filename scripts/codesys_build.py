@@ -1,31 +1,38 @@
 """
 CODESYS Scripting entry point for the BUILD stage.
 
-Invoked headlessly on the Windows runner:
-
-    "C:\\Program Files\\CODESYS 3.5.22.30\\CODESYS\\Common\\CODESYS.exe" ^
-        --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_build.py ^
-        --scriptargs "<project_path>;<report_path>"
+Invoked headlessly:
+    CODESYS.exe --profile="CODESYS V3.5 SP22" --runscript="scripts\\codesys_build.py" ^
+        --scriptargs:'<project_path> <report_path>' --noUI
 
 Responsibilities:
   1. Open the project.
-  2. Build (compile) the active application.
+  2. Generate code (compile) for the active application.
   3. Write a JUnit-style XML report with the compile result.
 
 Only compiles - does not touch any runtime/device. Exit code is non-zero
-on compile failure so the CI "build" job fails fast, before any container
-is started.
+on compile failure so the CI "build" job fails fast, before any runtime
+install is attempted.
 
-NOTE: exact CODESYS Scripting API calls can shift slightly between SP
-versions - verify against the "CODESYS Scripting" help chapter for
-V3.5 SP22 if a call below no longer matches your install.
+API confirmed against official CODESYS Forge examples (generate_code(),
+CompileCategory/Severity message checking):
+https://forge.codesys.com/forge/talk/Engineering/thread/26b27aa0cf/
+https://forge.codesys.com/tol/scripting/snippets/11/
 """
 
+from scriptengine import *
 import sys
 import time
 import traceback
 
-from scriptengine import projects, system  # provided by CODESYS at runtime
+CompileCategory = Guid("{97F48D64-A2A3-4856-B640-75C046E37EA9}")
+_SEVERITY_NAMES = {
+    Severity.FatalError: "Fatal error",
+    Severity.Error: "Error",
+    Severity.Warning: "Warning",
+    Severity.Information: "Information",
+    Severity.Text: "Text",
+}
 
 
 def write_junit(report_path, testsuite_name, cases):
@@ -51,30 +58,33 @@ def _escape(text):
 
 
 def main():
-    args = system.get_script_args() if hasattr(system, "get_script_args") else sys.argv[1:]
-    project_path, report_path = args[0].split(";")
+    project_path, report_path = sys.argv[1], sys.argv[2]
 
     cases = []
     t0 = time.time()
     try:
         project = projects.open(project_path)
-        app = project.active_application
+        system.clear_messages(CompileCategory)
+        project.active_application.generate_code()
 
-        build_result = app.build()
-        ok = getattr(build_result, "successful", build_result)
+        msgs = list(system.get_message_objects(CompileCategory, Severity.FatalError | Severity.Error))
+        ok = len(msgs) == 0
+        message = "\n".join(
+            "%s %s%s: %s" % (_SEVERITY_NAMES.get(m.severity, m.severity), m.prefix, m.number, m.text)
+            for m in msgs
+        )
 
         cases.append({
             "name": "compile",
             "status": "pass" if ok else "fail",
-            "message": "" if ok else "Build reported errors, see build log",
+            "message": message,
             "time": time.time() - t0,
         })
 
-        # Keep the compiled state (precompilecache) on disk so the deploy
-        # stage can reuse it without a full recompile.
-        project.save()
+        if ok:
+            project.save()
 
-        system.exit_code = 0 if ok else 1
+        exit_code = 0 if ok else 1
     except Exception:  # noqa: BLE001
         cases.append({
             "name": "compile",
@@ -82,9 +92,10 @@ def main():
             "message": traceback.format_exc(),
             "time": time.time() - t0,
         })
-        system.exit_code = 1
+        exit_code = 1
 
     write_junit(report_path, "codesys-build", cases)
+    system.exit(exit_code)
 
 
 main()

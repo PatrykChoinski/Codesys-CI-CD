@@ -1,23 +1,26 @@
 <#
 .SYNOPSIS
     Runs CODESYS.exe headless with a given script and returns its exit
-    code. Centralizes the exact command-line syntax CODESYS.exe expects:
-    --flag="value" with LITERAL quotes around values (confirmed by its
-    own error message: 'you must specify a profile using
-    --profile="profile name"') - PowerShell's `&` operator quoting for
-    spaces alone is not enough, so this builds the command line as one
-    string and runs it via Start-Process for full control over quoting.
+    code. Centralizes the exact command-line syntax confirmed against the
+    official docs (https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_starting_script_via_command_line.html):
+
+        CODESYS.exe --profile="<profile>" --runscript="<script>.py" --scriptargs:'<arg1> <arg2>' --noUI
+
+    Note --scriptargs uses a COLON and single quotes (not --scriptargs=),
+    and multiple arguments are space-separated within that single-quoted
+    block, read back in the script via plain `sys.argv`.
 #>
 param(
     [Parameter(Mandatory = $true)][string]$CodesysExe,
     [Parameter(Mandatory = $true)][string]$Profile,
     [Parameter(Mandatory = $true)][string]$ScriptPath,
-    [Parameter(Mandatory = $true)][string]$ScriptArgs
+    [Parameter(Mandatory = $true)][string[]]$ScriptArguments
 )
 
 $ErrorActionPreference = "Stop"
 
-$argumentString = '--profile="{0}" --noUI --runscript="{1}" --scriptargs="{2}"' -f $Profile, $ScriptPath, $ScriptArgs
+$scriptArgsValue = $ScriptArguments -join ' '
+$argumentString = "--profile=`"$Profile`" --runscript=`"$ScriptPath`" --scriptargs:'$scriptArgsValue' --noUI"
 
 $proc = Start-Process -FilePath $CodesysExe -ArgumentList $argumentString -Wait -PassThru -NoNewWindow
 return $proc.ExitCode

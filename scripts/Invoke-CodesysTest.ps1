@@ -7,9 +7,6 @@
 param(
     [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
-    [string]$DeviceAddress = "127.0.0.1",
-    [int]$GatewayPort = 1217,
-    [string]$ServiceName = "CODESYSControlWinV3x64",
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-test.xml")
 )
 
@@ -18,11 +15,10 @@ New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 try {
     Write-Host "== Running CODESYS Scripting smoke test =="
-    $scriptArgs = "$ProjectPath;$DeviceAddress;$GatewayPort;$ReportPath"
     $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
         -Profile "CODESYS V3.5 SP22" `
         -ScriptPath (Join-Path $PSScriptRoot "codesys_test.py") `
-        -ScriptArgs $scriptArgs
+        -ScriptArguments @($ProjectPath, $ReportPath)
 
     if (Test-Path $ReportPath) {
         Write-Host "== Test report =="
@@ -39,6 +35,11 @@ try {
 }
 finally {
     Write-Host "== Collecting runtime log and stopping the service =="
+    # Resolve the service by display name rather than a guessed short
+    # Name - CODESYS Control Win's exact internal service Name isn't
+    # confirmed, but its display name reliably contains "CODESYS Control".
+    $service = Get-Service | Where-Object { $_.DisplayName -like "*CODESYS Control*" } | Select-Object -First 1
+
     $logDir = "C:\ProgramData\CODESYS\CODESYSControlWinV3x64"
     $logDest = Join-Path (Split-Path $ReportPath) "codesys-rte.log"
     if (Test-Path $logDir) {
@@ -46,5 +47,8 @@ finally {
             Sort-Object LastWriteTime -Descending | Select-Object -First 1 |
             ForEach-Object { Copy-Item $_.FullName -Destination $logDest -Force }
     }
-    Stop-Service -Name $ServiceName -ErrorAction SilentlyContinue
+
+    if ($service) {
+        Stop-Service -Name $service.Name -ErrorAction SilentlyContinue
+    }
 }

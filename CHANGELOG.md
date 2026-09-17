@@ -5,6 +5,37 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Zweryfikowano całe użycie CODESYS Scripting/CLI wobec oficjalnej
+  dokumentacji (content.helpme-codesys.com, forum.codesys.com,
+  forge.codesys.com) zamiast dalszego zgadywania - dwie poprzednie
+  poprawki `--profile` (spacja, potem `=`) wciąż nie działały:
+  - **CLI**: potwierdzony realny format to `--scriptargs:'arg1 arg2'`
+    (dwukropek + pojedyncze cudzysłowy, argumenty oddzielone spacją), nie
+    `--scriptargs="..."`. `Invoke-CodesysCli.ps1` buduje teraz cały string
+    argumentów ręcznie w tym dokładnym formacie i zweryfikowano lokalnie
+    (przez `cmd.exe echo`), że `Start-Process` przekazuje go do procesu
+    bez zniekształceń.
+  - **Python/scripting API**: usunięto niepotwierdzony `from scriptengine
+    import projects, system` + wymyślone `app.build()`,
+    `system.get_script_args()`, `system.exit_code = ...`,
+    `app.get_device().set_communication_address(...)`. Zastąpiono
+    potwierdzonymi wzorcami z oficjalnych przykładów: `from scriptengine
+    import *` (jaw­ny odpowiednik automatycznego importu), argumenty przez
+    zwykły `sys.argv`, kompilacja przez
+    `project.active_application.generate_code()` + sprawdzenie
+    `system.get_message_objects(CompileCategory, Severity.FatalError|Error)`,
+    logowanie/start przez `online.create_online_application(app)` +
+    `OnlineChangeOption`/`ApplicationState`, wyjście przez `system.exit(code)`.
+  - Usunięto krok ustawiania adresu urządzenia (nigdzie niepotwierdzone
+    API) - projekt musi już być skonfigurowany na localhost (tak jak przy
+    lokalnym developmencie na tej samej maszynie co runtime).
+  - `Install-CodesysRuntime.ps1`/`Invoke-CodesysTest.ps1`: nazwa usługi
+    Windows dla runtime nie jest pewna (dokumentacja pokazuje różne
+    warianty) - usługa jest teraz wyszukiwana dynamicznie po
+    `DisplayName -like "*CODESYS Control*"` zamiast zgadywania sztywnej
+    nazwy `CODESYSControlWinV3x64`.
+
+### Fixed
 - Poprzednia poprawka `--profile=...` nadal nie działała - komunikat błędu
   CODESYS.exe pokazuje wymagany format z **literalnymi cudzysłowami wokół
   wartości**: `--profile="profile name"`. PowerShell'owe cudzysłowy przy
