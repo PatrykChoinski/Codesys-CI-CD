@@ -7,23 +7,50 @@ on:
     branches: [master]
   workflow_dispatch: {}
 
-# All three jobs pin to the SAME self-hosted Windows runner (label
-# "codesys-windows"). The deploy job starts the CODESYS Control Win V3
-# runtime container and leaves it running; the test job assumes it is
-# still there and tears it down. This only works reliably with a single
-# runner behind that label - do not scale it out without redesigning the
-# deploy->test handoff (e.g. passing a real reachable device address
-# instead of "same machine, localhost").
+env:
+  # Bump this when the installers behind the secret URLs change, to
+  # invalidate the actions/cache entry below.
+  CODESYS_VERSION: "3.5.22.0"
+
 jobs:
   build:
-    runs-on: [self-hosted, windows, codesys-windows]
+    # Hosted, ephemeral runner - a fresh VM per job, so no Docker/self-hosted
+    # machine needed for isolation. See installers/README.md for how the
+    # (licensed, login-gated) CODESYS installers reach this job.
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache CODESYS Development System installer
+        id: cache-devsys
+        uses: actions/cache@v4
+        with:
+          path: installers\CODESYSDevSystemSetup.exe
+          key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
+
+      - name: Download CODESYS Development System installer
+        if: steps.cache-devsys.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path installers | Out-Null
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
+
+      - name: Install CODESYS Development System
+        shell: pwsh
+        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath installers\CODESYSDevSystemSetup.exe
+
       - name: Compile project
         shell: pwsh
         run: ./scripts/Invoke-CodesysBuild.ps1
+
+      - name: Upload compiled project (incl. precompilecache)
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-project
+          path: |
+            CICD.project
+            *.precompilecache
 
       - name: Upload build report
         if: always()
@@ -33,38 +60,63 @@ jobs:
           path: reports/junit-build.xml
           if-no-files-found: warn
 
-  deploy:
+  deploy-test:
     needs: build
-    runs-on: [self-hosted, windows, codesys-windows]
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build runtime image, start container, download+start application
+      - name: Download compiled project
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-project
+
+      - name: Cache CODESYS Development System installer
+        id: cache-devsys
+        uses: actions/cache@v4
+        with:
+          path: installers\CODESYSDevSystemSetup.exe
+          key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
+
+      - name: Download CODESYS Development System installer
+        if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
-        env:
-          CODESYS_RTE_INSTALLER: ${{ secrets.CODESYS_RTE_INSTALLER_FILENAME }}
         run: |
-          ./scripts/Invoke-CodesysDeploy.ps1 -CodesysRteInstaller $env:CODESYS_RTE_INSTALLER
+          New-Item -ItemType Directory -Force -Path installers | Out-Null
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
+
+      - name: Install CODESYS Development System
+        shell: pwsh
+        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath installers\CODESYSDevSystemSetup.exe
+
+      - name: Cache CODESYS Control Win V3 installer
+        id: cache-rte
+        uses: actions/cache@v4
+        with:
+          path: installers\CODESYSControlWinV3x64Setup.exe
+          key: codesys-rte-installer-${{ env.CODESYS_VERSION }}
+
+      - name: Download CODESYS Control Win V3 installer
+        if: steps.cache-rte.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path installers | Out-Null
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_RTE_INSTALLER_URL }}" -OutFile installers\CODESYSControlWinV3x64Setup.exe
+
+      - name: Deploy application to runtime (login, download, start)
+        shell: pwsh
+        run: ./scripts/Invoke-CodesysDeploy.ps1 -RteInstallerPath installers\CODESYSControlWinV3x64Setup.exe
 
       - name: Upload deploy report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codesys-deploy-report
-          path: |
-            reports/junit-deploy.xml
-            reports/codesys-rte-deploy.log
+          path: reports/junit-deploy.xml
           if-no-files-found: warn
 
-  test:
-    needs: deploy
-    runs-on: [self-hosted, windows, codesys-windows]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run smoke test against deployed application
+      - name: Run smoke test
         shell: pwsh
         run: ./scripts/Invoke-CodesysTest.ps1
 

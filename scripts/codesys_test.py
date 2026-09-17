@@ -1,8 +1,9 @@
 """
 CODESYS Scripting entry point for the TEST stage (smoke test).
 
-Invoked headlessly on the Windows self-hosted runner, after the DEPLOY
-stage has downloaded and started the application on the runtime container:
+Invoked headlessly on the Windows runner, after the DEPLOY stage has
+downloaded and started the application on the runtime running on the
+same machine:
 
     "C:\\Program Files\\CODESYS 3.5.22.0\\CODESYS\\Common\\CODESYS.exe" ^
         --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_test.py ^

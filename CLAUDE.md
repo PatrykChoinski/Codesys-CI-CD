@@ -12,12 +12,16 @@ Zasady pracy Claude w tym repozytorium.
 
 - `CICD.project` — projekt CODESYS Control Win V3 (Development System, Windows-only).
 - CODESYS IDE nie ma wersji na Linuksa/kontenerowej — kompilacja i sterowanie
-  (CODESYS Scripting) odbywają się tylko na Windows (self-hosted runner z
-  zainstalowanym CODESYS).
-- Runtime do testów (`CODESYS Control Win V3 x64`, target V3.5 SP22) działa w
-  **kontenerze Windows** (Docker Desktop/Engine w trybie "Windows containers"),
-  patrz `docker/README.md`.
-- Pipeline CI (`.github/workflows/codesys-ci.yml`) jest podzielony na 3 joby:
-  `build` (kompilacja) → `deploy` (obraz + kontener + login/download/start) →
-  `test` (smoke test stanu RUN + teardown kontenera). Szczegóły w `README.md`.
+  (CODESYS Scripting) odbywają się tylko na Windows.
+- CI działa na hostowanych runnerach GitHub `windows-latest` — bez Dockera i
+  bez self-hosted maszyny. Runtime (`CODESYS Control Win V3 x64`, target
+  V3.5 SP22) instalowany jest bezpośrednio na runnerze jako usługa Windows
+  (świeża VM per job już daje pełną izolację). Instalatory pobierane z
+  prywatnego storage i cache'owane przez `actions/cache`, patrz
+  `installers/README.md`.
+- Pipeline CI (`.github/workflows/codesys-ci.yml`) ma 2 joby: `build`
+  (kompilacja, artefakt `compiled-project`) → `deploy-test` (install RTE +
+  login/download/start + smoke test stanu RUN w jednym jobie, bo oba kroki
+  potrzebują tej samej żywej usługi runtime na tej samej VM). Szczegóły w
+  `README.md`.
 - Pełny opis architektury i uzasadnienie decyzji: patrz `README.md`.

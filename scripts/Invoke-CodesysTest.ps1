@@ -1,14 +1,15 @@
 <#
 .SYNOPSIS
-    TEST stage: runs the smoke test against the already-deployed
-    application (container started and left running by the DEPLOY stage),
-    then always tears the container down and collects its logs.
+    TEST stage: runs the smoke test against the application deployed by
+    the DEPLOY stage in the same job (same runner, no container to tear
+    down), collects the runtime log and stops the service.
 #>
 param(
     [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
-    [string]$ContainerName = "codesys-rte-ci",
+    [string]$DeviceAddress = "127.0.0.1",
     [int]$GatewayPort = 1217,
+    [string]$ServiceName = "CODESYSControlWinV3x64",
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-test.xml")
 )
 
@@ -17,7 +18,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 try {
     Write-Host "== Running CODESYS Scripting smoke test =="
-    $scriptArgs = "$ProjectPath;127.0.0.1;$GatewayPort;$ReportPath"
+    $scriptArgs = "$ProjectPath;$DeviceAddress;$GatewayPort;$ReportPath"
     & $CodesysExe --profile "CODESYS V3.5 SP22" --noUI `
         "--runscript=$(Join-Path $PSScriptRoot 'codesys_test.py')" `
         --scriptargs $scriptArgs
@@ -37,7 +38,13 @@ try {
     Write-Host "Test stage finished successfully."
 }
 finally {
-    Write-Host "== Collecting runtime logs and tearing down container =="
-    docker logs $ContainerName 2>&1 | Out-File (Join-Path (Split-Path $ReportPath) "codesys-rte.log")
-    docker rm -f $ContainerName | Out-Null
+    Write-Host "== Collecting runtime log and stopping the service =="
+    $logDir = "C:\ProgramData\CODESYS\CODESYSControlWinV3x64"
+    $logDest = Join-Path (Split-Path $ReportPath) "codesys-rte.log"
+    if (Test-Path $logDir) {
+        Get-ChildItem -Path $logDir -Filter *.log -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1 |
+            ForEach-Object { Copy-Item $_.FullName -Destination $logDest -Force }
+    }
+    Stop-Service -Name $ServiceName -ErrorAction SilentlyContinue
 }

@@ -9,6 +9,6 @@
 !/reports/.gitkeep
 *.log
 
-# CODESYS runtime installer (licensed download, not committed to git)
-docker/installers/*
-!docker/installers/.gitkeep
+# CODESYS installers (licensed download, not committed to git)
+installers/*
+!installers/README.md

@@ -11,7 +11,8 @@ container is already built and running:
 Responsibilities:
   1. Open the (already built) project.
   2. Point the active application's communication channel at the
-     CODESYS Control Win V3 runtime container (device_address:gateway_port).
+     CODESYS Control Win V3 runtime running on this same runner
+     (device_address:gateway_port, installed directly - no container).
   3. Log in, download the boot application, start it.
   4. Log out (the application keeps running on the device independently
      of the engineering session) and write a JUnit-style XML report.

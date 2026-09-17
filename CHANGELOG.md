@@ -5,6 +5,30 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Changed
+- Zrezygnowano z Dockera i self-hosted runnera na rzecz hostowanych
+  runnerów GitHub `windows-latest`: świeża maszyna wirtualna per job daje
+  wystarczającą izolację, więc CODESYS Control Win V3 x64 (runtime) jest
+  teraz instalowany bezpośrednio na runnerze jako usługa Windows zamiast
+  w kontenerze. Usunięto katalog `docker/` (Dockerfile, entrypoint.ps1,
+  docker-compose.yml).
+- Pipeline CI zredukowany z 3 do 2 jobów w `.github/workflows/codesys-ci.yml`:
+  `build` → `deploy-test` (etapy deploy i test zostały połączone w jeden
+  job, bo na hostowanym runnerze każdy job to osobna, świeża VM - etap
+  testu potrzebuje tej samej, już uruchomionej usługi runtime co etap
+  deployu). Dodano cache'owanie instalatorów przez `actions/cache` oraz
+  przekazywanie skompilowanego projektu między jobami przez artefakt
+  `compiled-project`.
+
+### Added
+- `scripts/Install-CodesysDevSystem.ps1` i `scripts/Install-CodesysRuntime.ps1`
+  — idempotentna, cicha instalacja CODESYS Development System i CODESYS
+  Control Win V3 x64 bezpośrednio na runnerze.
+- `installers/README.md` — wyjaśnienie, skąd biorą się instalatory
+  (wymagane logowanie do CODESYS Store) i jak są dostarczane do CI
+  (prywatny storage + sekrety `CODESYS_DEVSYS_INSTALLER_URL` /
+  `CODESYS_RTE_INSTALLER_URL`).
+
+### Changed
 - Runtime testowy przeniesiony z kontenera Ubuntu (`CODESYS Control for Linux SL`)
   na kontener Windows z `CODESYS Control Win V3 x64` (`docker/Dockerfile`,
   `docker/entrypoint.ps1`, `docker/docker-compose.yml`, `docker/README.md`
