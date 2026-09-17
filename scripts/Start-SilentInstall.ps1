@@ -12,7 +12,12 @@
 param(
     [Parameter(Mandatory = $true)][string]$InstallerPath,
     [Parameter(Mandatory = $true)][string[]]$ArgumentList,
-    [int]$TimeoutMinutes = 15
+    # InstallShield bootstraps chain through several msiexec runs (VC++
+    # redist x86/x64, .NET, the product itself) - observed ~13 min on a
+    # GitHub-hosted runner, but this varies a lot with disk/CPU/AV
+    # contention, so the default leaves real headroom rather than cutting
+    # it close.
+    [int]$TimeoutMinutes = 40
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +26,10 @@ $proc = Start-Process -FilePath $InstallerPath -ArgumentList $ArgumentList -Pass
 $finished = $proc.WaitForExit([int]([TimeSpan]::FromMinutes($TimeoutMinutes).TotalMilliseconds))
 
 if (-not $finished) {
-    try { $proc.Kill() } catch {}
+    # The launcher process spawns further msiexec children that don't die
+    # with it - kill the whole tree so a timeout doesn't leave a half
+    # -finished install running in the background.
+    try { taskkill /T /F /PID $proc.Id 2>&1 | Out-Null } catch {}
     throw @"
 '$InstallerPath' did not finish within $TimeoutMinutes minute(s) - most
 likely it ignored the silent-install switch(es) '$($ArgumentList -join ' ')'

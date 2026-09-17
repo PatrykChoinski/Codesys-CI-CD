@@ -5,6 +5,28 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Przetestowano lokalnie (na maszynie z realnie zainstalowanym CODESYS,
+  zamiast czekać ~15 min na każdy przebieg CI) i znaleziono dwa kolejne
+  realne błędy:
+  - **Nazwa profilu**: `--profile="CODESYS V3.5 SP22"` samo w sobie nie
+    jest prawidłową nazwą - zarejestrowany profil dla wersji 3.5.22.30 to
+    `"CODESYS V3.5 SP22 Patch 3"` (potwierdzone wprost z argumentów
+    skrótu w Menu Start). Ustawiono to jako domyślne w
+    `Invoke-CodesysBuild.ps1`/`Invoke-CodesysDeploy.ps1`/`Invoke-CodesysTest.ps1`
+    (parametr `-Profile`, można nadpisać do testów na innej wersji).
+  - **Cudzysłowy w `--scriptargs`**: `Invoke-CodesysCli.ps1` łączył
+    argumenty spacją bez indywidualnego cytowania każdego z nich - dla
+    ścieżek zawierających spacje (np. lokalny checkout w folderze
+    `Codesys CI CD`) tokenizer CODESYS rozbijał jedną ścieżkę na kilka
+    argumentów, przez co skrypt dostawał ucięte, błędne wartości bez
+    żadnego widocznego błędu (cichy exit code 1, brak raportu). Naprawiono
+    przez owijanie każdego argumentu w cudzysłowy przed złączeniem.
+  - `Start-SilentInstall.ps1`: podniesiono domyślny timeout z 15 do 40 min
+    (obserwowane ~13 min na hostowanym runnerze, ale znacznie dłużej na
+    wolniejszej maszynie) i naprawiono zabijanie na timeout - InstallShield
+    odpala dalsze procesy `msiexec`, które nie kończyły się razem z
+    procesem nadrzędnym; teraz zabijane jest całe drzewo procesów
+    (`taskkill /T /F`).
 - Zweryfikowano całe użycie CODESYS Scripting/CLI wobec oficjalnej
   dokumentacji (content.helpme-codesys.com, forum.codesys.com,
   forge.codesys.com) zamiast dalszego zgadywania - dwie poprzednie

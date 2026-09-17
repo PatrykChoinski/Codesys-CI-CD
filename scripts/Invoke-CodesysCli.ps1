@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$scriptArgsValue = $ScriptArguments -join ' '
+$scriptArgsValue = ($ScriptArguments | ForEach-Object { '"{0}"' -f $_ }) -join ' '
 $argumentString = "--profile=`"$Profile`" --runscript=`"$ScriptPath`" --scriptargs:'$scriptArgsValue' --noUI"
 
 $proc = Start-Process -FilePath $CodesysExe -ArgumentList $argumentString -Wait -PassThru -NoNewWindow

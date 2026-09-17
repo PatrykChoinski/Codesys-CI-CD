@@ -5,6 +5,10 @@
 #>
 param(
     [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe",
+    # Must match exactly what's registered on the machine (Start Menu
+    # shortcut arguments show the authoritative string) - for 3.5.22.30
+    # that's "...Patch 3", NOT just "CODESYS V3.5 SP22".
+    [string]$Profile = "CODESYS V3.5 SP22 Patch 3",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-build.xml")
 )
@@ -14,7 +18,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 Write-Host "== Compiling project =="
 $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
-    -Profile "CODESYS V3.5 SP22" `
+    -Profile $Profile `
     -ScriptPath (Join-Path $PSScriptRoot "codesys_build.py") `
     -ScriptArguments @($ProjectPath, $ReportPath)
 
