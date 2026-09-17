@@ -23,20 +23,29 @@ if ($exes.Count -eq 0) {
     throw "No .exe found after extracting '$ZipPath' into '$DestinationDir'."
 }
 
+# InstallShield-based CODESYS installers bundle prerequisite installers
+# (VC++ redist, .NET, the InstallShield engine itself) under an
+# "ISSetupPrerequisites" subfolder - the real installer is the one
+# sitting outside of it (typically directly in $DestinationDir).
+$candidates = $exes | Where-Object { $_.FullName -notmatch "ISSetupPrerequisites" }
+if ($candidates.Count -eq 0) {
+    $candidates = $exes
+}
+
 $chosen = $null
-if ($exes.Count -eq 1) {
-    $chosen = $exes[0]
+if ($candidates.Count -eq 1) {
+    $chosen = $candidates[0]
 } else {
-    $setupMatches = $exes | Where-Object { $_.Name -match "Setup" }
+    $setupMatches = $candidates | Where-Object { $_.Name -match "Setup" }
     if ($setupMatches.Count -eq 1) {
         $chosen = $setupMatches[0]
     } else {
-        $candidates = ($exes | ForEach-Object { $_.FullName }) -join "`n  "
+        $list = ($candidates | ForEach-Object { $_.FullName }) -join "`n  "
         throw @"
-Found multiple .exe files after extracting '$ZipPath' and none/more than
-one matched '*Setup*' unambiguously - pick the right one and adjust
-Expand-Installer.ps1 (or pass a narrower -DestinationDir per installer):
-  $candidates
+Found multiple candidate .exe files after extracting '$ZipPath' (outside
+ISSetupPrerequisites) and none/more than one matched '*Setup*'
+unambiguously - pick the right one and adjust Expand-Installer.ps1:
+  $list
 "@
     }
 }

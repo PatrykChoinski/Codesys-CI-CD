@@ -4,6 +4,14 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- `scripts/Expand-Installer.ps1`: instalator CODESYS Development System to
+  pakiet InstallShield, który poza właściwym `.exe` zawiera dodatkowe
+  instalatory-wymagania (VC++ redist, .NET, silnik InstallShield) w
+  podfolderze `ISSetupPrerequisites`. Wybór pliku wykluczał teraz te
+  podfoldery zamiast polegać wyłącznie na dopasowaniu nazwy do `*Setup*`
+  (rzeczywisty plik to `CODESYS 64 3.5.22.30.exe`, bez słowa "Setup").
+
 ### Changed
 - Instalatory CODESYS przeniesione z pomysłu "link do prywatnego storage +
   sekrety URL" na **assety prywatnego GitHub Release** (tag `Installers`,
