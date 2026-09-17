@@ -36,9 +36,12 @@ windows-latest (hostowany runner GitHub Actions, świeża VM per job)
 ```
 CICD.project                        - projekt CODESYS
 installers/
-  README.md                         - skąd biorą się instalatory (licencja, prywatny storage)
-                                       (same instalatory .exe są git-ignored)
+  README.md                         - skąd biorą się instalatory (licencja, prywatny storage, .zip)
+                                       (same archiwa/instalatory są git-ignored)
 scripts/
+  Assert-ValidZip.ps1               - walidacja pobranego .zip (rozmiar, sygnatura PK)
+  Assert-ValidExe.ps1               - walidacja rozpakowanego .exe (rozmiar, sygnatura MZ)
+  Expand-Installer.ps1              - rozpakowuje .zip i znajduje właściwy .exe w środku
   Install-CodesysDevSystem.ps1      - silent install CODESYS Development System
   Install-CodesysRuntime.ps1        - silent install + start CODESYS Control Win V3 (usługa)
   codesys_build.py                  - CODESYS Scripting: kompilacja projektu

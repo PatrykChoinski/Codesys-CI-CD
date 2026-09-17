@@ -5,6 +5,17 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Instalatory CODESYS Store dostarczane są jako **archiwa .zip**, nie
+  gołe `.exe` - workflow pobierał plik pod nazwą `...Setup.exe`, ale
+  faktyczna zawartość to zip, stąd błąd `Start-Process: ... corrupted and
+  unreadable`. Zmieniono pobieranie na `.zip` (`installers\*.zip`,
+  cache'owane jak wcześniej) + dodano krok rozpakowania
+  (`scripts/Expand-Installer.ps1`, wyszukuje `.exe` w archiwum) przed
+  wywołaniem `Install-CodesysDevSystem.ps1` / `Invoke-CodesysDeploy.ps1`.
+  Dodano `scripts/Assert-ValidZip.ps1` (walidacja sygnatury `PK`) obok
+  istniejącego `Assert-ValidExe.ps1`.
+
+### Fixed
 - `scripts/Assert-ValidExe.ps1`: walidacja pobranego instalatora (rozmiar,
   sygnatura `MZ`) tuż po `Invoke-WebRequest` w workflow oraz w
   `Install-CodesysDevSystem.ps1` / `Install-CodesysRuntime.ps1`. Zapobiega

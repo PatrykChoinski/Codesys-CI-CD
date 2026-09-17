@@ -24,24 +24,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache CODESYS Development System installer
+      - name: Cache CODESYS Development System installer archive
         id: cache-devsys
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSDevSystemSetup.exe
+          path: installers\CODESYSDevSystemSetup.zip
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
-      - name: Download CODESYS Development System installer
+      - name: Download CODESYS Development System installer archive
         if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
-          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSDevSystemSetup.exe
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.zip
+
+      - name: Extract CODESYS Development System installer
+        id: extract-devsys
+        shell: pwsh
+        run: |
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSDevSystemSetup.zip -DestinationDir installers\devsys
+          "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
         shell: pwsh
-        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath installers\CODESYSDevSystemSetup.exe
+        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
       - name: Compile project
         shell: pwsh
@@ -75,43 +81,55 @@ jobs:
         with:
           name: compiled-project
 
-      - name: Cache CODESYS Development System installer
+      - name: Cache CODESYS Development System installer archive
         id: cache-devsys
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSDevSystemSetup.exe
+          path: installers\CODESYSDevSystemSetup.zip
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
-      - name: Download CODESYS Development System installer
+      - name: Download CODESYS Development System installer archive
         if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
-          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSDevSystemSetup.exe
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.zip
+
+      - name: Extract CODESYS Development System installer
+        id: extract-devsys
+        shell: pwsh
+        run: |
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSDevSystemSetup.zip -DestinationDir installers\devsys
+          "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
         shell: pwsh
-        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath installers\CODESYSDevSystemSetup.exe
+        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
-      - name: Cache CODESYS Control Win V3 installer
+      - name: Cache CODESYS Control Win V3 installer archive
         id: cache-rte
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSControlWinV3x64Setup.exe
+          path: installers\CODESYSControlWinV3x64Setup.zip
           key: codesys-rte-installer-${{ env.CODESYS_VERSION }}
 
-      - name: Download CODESYS Control Win V3 installer
+      - name: Download CODESYS Control Win V3 installer archive
         if: steps.cache-rte.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_RTE_INSTALLER_URL }}" -OutFile installers\CODESYSControlWinV3x64Setup.exe
-          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSControlWinV3x64Setup.exe
+          Invoke-WebRequest -Uri "${{ secrets.CODESYS_RTE_INSTALLER_URL }}" -OutFile installers\CODESYSControlWinV3x64Setup.zip
+
+      - name: Extract CODESYS Control Win V3 installer
+        id: extract-rte
+        shell: pwsh
+        run: |
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSControlWinV3x64Setup.zip -DestinationDir installers\rte
+          "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Deploy application to runtime (login, download, start)
         shell: pwsh
-        run: ./scripts/Invoke-CodesysDeploy.ps1 -RteInstallerPath installers\CODESYSControlWinV3x64Setup.exe
+        run: ./scripts/Invoke-CodesysDeploy.ps1 -RteInstallerPath "${{ steps.extract-rte.outputs.exe_path }}"
 
       - name: Upload deploy report
         if: always()
