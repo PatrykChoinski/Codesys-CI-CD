@@ -37,6 +37,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
           Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
+          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSDevSystemSetup.exe
 
       - name: Install CODESYS Development System
         shell: pwsh
@@ -87,6 +88,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
           Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.exe
+          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSDevSystemSetup.exe
 
       - name: Install CODESYS Development System
         shell: pwsh
@@ -105,6 +107,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
           Invoke-WebRequest -Uri "${{ secrets.CODESYS_RTE_INSTALLER_URL }}" -OutFile installers\CODESYSControlWinV3x64Setup.exe
+          ./scripts/Assert-ValidExe.ps1 -Path installers\CODESYSControlWinV3x64Setup.exe
 
       - name: Deploy application to runtime (login, download, start)
         shell: pwsh

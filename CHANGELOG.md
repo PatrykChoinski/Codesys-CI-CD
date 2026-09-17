@@ -5,6 +5,15 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- `scripts/Assert-ValidExe.ps1`: walidacja pobranego instalatora (rozmiar,
+  sygnatura `MZ`) tuż po `Invoke-WebRequest` w workflow oraz w
+  `Install-CodesysDevSystem.ps1` / `Install-CodesysRuntime.ps1`. Zapobiega
+  mylącemu błędowi `Start-Process: ... corrupted and unreadable`, gdy link
+  do instalatora (np. share Synology) zwraca stronę HTML zamiast realnego
+  pliku `.exe`. `installers/README.md` opisuje jak to sprawdzić (`curl -I`)
+  i naprawić URL.
+
+### Fixed
 - Poprawiono numer wersji CODESYS z `3.5.22.0` na faktyczny `3.5.22.30`
   (potwierdzony na stronach store.codesys.com dla "CODESYS Development
   System 3" i "CODESYS Control Win SL") w workflow oraz domyślnych

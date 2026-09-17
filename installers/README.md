@@ -21,3 +21,30 @@ tylko przy braku trafienia w cache - kolejne uruchomienia na tym samym
 kluczu nie pobierają ich ponownie. Sam proces instalacji (silent install)
 uruchamia się jednak w każdym jobie od nowa, bo hostowany runner GitHub
 (`windows-latest`) to za każdym razem świeża, jednorazowa maszyna.
+
+## Ważne: URL musi być bezpośrednim linkiem do pliku
+
+`Invoke-WebRequest` w workflow zapisuje 1:1 to, co dostanie pod danym URL.
+Jeśli URL to link do **strony podglądu/udostępniania** (np. link Synology
+Drive `.../d/s/<id>/<key>` otwierany normalnie w przeglądarce, gdzie plik
+ściąga się dopiero po kliknięciu przycisku "Pobierz"), to zamiast realnego
+`.exe` zostanie zapisana strona HTML - a próba jej uruchomienia kończy się
+błędem `Start-Process: ... file or directory is corrupted and unreadable`.
+
+Przed wstawieniem URL do sekretu warto zweryfikować, że to faktycznie
+bezpośredni link do pliku:
+
+```powershell
+curl.exe -I "<url>"
+```
+
+Odpowiedź powinna mieć `Content-Type: application/octet-stream` (albo
+`application/x-msdownload`) i `Content-Length` zgodny z rozmiarem
+instalatora - nie `Content-Type: text/html`. Jeśli link Synology zwraca
+HTML, sprawdź w Synology Drive/File Station opcję bezpośredniego linku do
+pobrania (nie link "do podglądu") albo rozważ inny hosting (prywatny
+GitHub Release asset, Azure Blob z SAS token).
+
+Workflow i tak waliduje pobrany plik (`scripts/Assert-ValidExe.ps1` -
+sprawdza rozmiar i sygnaturę `MZ`) i przerywa job z czytelnym komunikatem
+zamiast dopiero przy próbie instalacji.

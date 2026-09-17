@@ -23,6 +23,8 @@ if (-not (Test-Path $InstallerPath)) {
     throw "Installer not found at $InstallerPath"
 }
 
+& (Join-Path $PSScriptRoot "Assert-ValidExe.ps1") -Path $InstallerPath
+
 Write-Host "== Installing CODESYS Development System =="
 # NSIS-based installer - verify the exact silent-install switch for your
 # downloaded build with: & $InstallerPath /?

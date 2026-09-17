@@ -20,6 +20,8 @@ if (-not $existing) {
         throw "Installer not found at $InstallerPath"
     }
 
+    & (Join-Path $PSScriptRoot "Assert-ValidExe.ps1") -Path $InstallerPath
+
     Write-Host "== Installing CODESYS Control Win V3 x64 =="
     # NSIS-based installer - verify the exact silent-install switch for your
     # downloaded build with: & $InstallerPath /?
