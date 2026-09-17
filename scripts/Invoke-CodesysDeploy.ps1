@@ -24,9 +24,9 @@ New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 Write-Host "== Running CODESYS Scripting (login, download, start) =="
 $scriptArgs = "$ProjectPath;$DeviceAddress;$GatewayPort;$ReportPath"
-& $CodesysExe --profile "CODESYS V3.5 SP22" --noUI `
+& $CodesysExe "--profile=CODESYS V3.5 SP22" --noUI `
     "--runscript=$(Join-Path $PSScriptRoot 'codesys_deploy.py')" `
-    --scriptargs $scriptArgs
+    "--scriptargs=$scriptArgs"
 $codesysExit = $LASTEXITCODE
 
 if (Test-Path $ReportPath) {

@@ -5,6 +5,16 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Instalacja CODESYS Development System w końcu przeszła (trwała ~13 min -
+  to był legalnie długi install kilku zależności typu VC++ redist/.NET,
+  nie zawieszenie), ale kompilacja padała z błędem CODESYS.exe: "When
+  running in --noUI mode, you must specify a profile using
+  --profile=...". CODESYS CLI wymaga formatu `--flag=wartość` (ze znakiem
+  `=`), a nie `--flag wartość` (spacja) jak było wcześniej. Poprawiono
+  `--profile`/`--scriptargs` na format z `=` w `Invoke-CodesysBuild.ps1`,
+  `Invoke-CodesysDeploy.ps1`, `Invoke-CodesysTest.ps1`.
+
+### Fixed
 - Job `build` wisiał 50+ minut na kroku instalacji CODESYS Development
   System: flaga `/S` (NSIS) była błędna dla tego instalatora
   (InstallShield-wrapped MSI) - prawdopodobnie próbował pokazać UI, na
