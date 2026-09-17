@@ -8,17 +8,20 @@ on:
   workflow_dispatch: {}
 
 env:
-  # Bump this when the installers behind the secret URLs change, to
-  # invalidate the actions/cache entry below. Matches the "Aktuelle
-  # Version" shown on the CODESYS Store product pages (Development
-  # System / Control Win SL), e.g. 3.5.22.30.
+  # Bump these together when the installers change: CODESYS_VERSION
+  # invalidates the actions/cache entries, and the asset names must match
+  # exactly what was uploaded to the GitHub Release below.
   CODESYS_VERSION: "3.5.22.30"
+  CODESYS_RELEASE_TAG: "Installers"
+  CODESYS_DEVSYS_ASSET: "CODESYS.64.3.5.22.30.zip"
+  CODESYS_RTE_ASSET: "CODESYS.Control.RTE.SL.3.5.22.30.zip"
 
 jobs:
   build:
     # Hosted, ephemeral runner - a fresh VM per job, so no Docker/self-hosted
-    # machine needed for isolation. See installers/README.md for how the
-    # (licensed, login-gated) CODESYS installers reach this job.
+    # machine needed for isolation. Installers are pulled from this repo's
+    # private "Installers" GitHub Release (see installers/README.md) using
+    # the built-in GITHUB_TOKEN - no external hosting/secrets involved.
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -28,21 +31,24 @@ jobs:
         id: cache-devsys
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSDevSystemSetup.zip
+          path: installers\${{ env.CODESYS_DEVSYS_ASSET }}
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
       - name: Download CODESYS Development System installer archive
         if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.zip
+          gh release download "$env:CODESYS_RELEASE_TAG" --repo "${{ github.repository }}" `
+            --pattern "$env:CODESYS_DEVSYS_ASSET" --dir installers --clobber
 
       - name: Extract CODESYS Development System installer
         id: extract-devsys
         shell: pwsh
         run: |
-          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSDevSystemSetup.zip -DestinationDir installers\devsys
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath "installers\$env:CODESYS_DEVSYS_ASSET" -DestinationDir installers\devsys
           "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
@@ -85,21 +91,24 @@ jobs:
         id: cache-devsys
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSDevSystemSetup.zip
+          path: installers\${{ env.CODESYS_DEVSYS_ASSET }}
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
       - name: Download CODESYS Development System installer archive
         if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_DEVSYS_INSTALLER_URL }}" -OutFile installers\CODESYSDevSystemSetup.zip
+          gh release download "$env:CODESYS_RELEASE_TAG" --repo "${{ github.repository }}" `
+            --pattern "$env:CODESYS_DEVSYS_ASSET" --dir installers --clobber
 
       - name: Extract CODESYS Development System installer
         id: extract-devsys
         shell: pwsh
         run: |
-          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSDevSystemSetup.zip -DestinationDir installers\devsys
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath "installers\$env:CODESYS_DEVSYS_ASSET" -DestinationDir installers\devsys
           "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
@@ -110,21 +119,24 @@ jobs:
         id: cache-rte
         uses: actions/cache@v4
         with:
-          path: installers\CODESYSControlWinV3x64Setup.zip
+          path: installers\${{ env.CODESYS_RTE_ASSET }}
           key: codesys-rte-installer-${{ env.CODESYS_VERSION }}
 
       - name: Download CODESYS Control Win V3 installer archive
         if: steps.cache-rte.outputs.cache-hit != 'true'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Force -Path installers | Out-Null
-          Invoke-WebRequest -Uri "${{ secrets.CODESYS_RTE_INSTALLER_URL }}" -OutFile installers\CODESYSControlWinV3x64Setup.zip
+          gh release download "$env:CODESYS_RELEASE_TAG" --repo "${{ github.repository }}" `
+            --pattern "$env:CODESYS_RTE_ASSET" --dir installers --clobber
 
       - name: Extract CODESYS Control Win V3 installer
         id: extract-rte
         shell: pwsh
         run: |
-          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath installers\CODESYSControlWinV3x64Setup.zip -DestinationDir installers\rte
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath "installers\$env:CODESYS_RTE_ASSET" -DestinationDir installers\rte
           "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Deploy application to runtime (login, download, start)

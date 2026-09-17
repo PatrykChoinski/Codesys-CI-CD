@@ -88,12 +88,14 @@ weryfikacji działania.
 
 - Brak self-hosted runnera i Dockera — wystarczy standardowy hostowany
   `windows-latest` (dostępny od razu dla repo/organizacji na GitHub).
-- Instalatory CODESYS (Development System + Control Win V3 x64) wystawione
-  z prywatnego storage pod adresami w sekretach repo
-  `CODESYS_DEVSYS_INSTALLER_URL` i `CODESYS_RTE_INSTALLER_URL` — patrz
-  [`installers/README.md`](installers/README.md) po szczegóły i uzasadnienie
-  (CODESYS Store wymaga logowania, więc nie da się tego pobrać anonimowo
-  bezpośrednio w workflow).
+- Instalatory CODESYS (Development System + Control Win V3 x64/Control Win
+  SL) wgrane jako assety prywatnego GitHub Release (tag `Installers`) w
+  tym repo — pobierane w workflow przez `gh release download` z wbudowanym
+  `GITHUB_TOKEN`, bez żadnego zewnętrznego hostingu/sekretów URL. Patrz
+  [`installers/README.md`](installers/README.md) po szczegóły, dokładne
+  nazwy assetów i jak podmienić wersję (CODESYS Store wymaga logowania,
+  więc nie da się tego pobrać anonimowo bezpośrednio w workflow — stąd ten
+  pośredni krok).
 - Licencja CODESYS Development System musi dopuszczać headless build na
   świeżej maszynie w każdym uruchomieniu CI (jeśli licencja wymaga
   aktywacji online per-maszyna, może to wymagać licencji floating/CmC albo

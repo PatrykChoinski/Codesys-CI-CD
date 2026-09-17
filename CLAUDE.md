@@ -17,7 +17,8 @@ Zasady pracy Claude w tym repozytorium.
   bez self-hosted maszyny. Runtime (`CODESYS Control Win V3 x64`, target
   V3.5 SP22) instalowany jest bezpośrednio na runnerze jako usługa Windows
   (świeża VM per job już daje pełną izolację). Instalatory pobierane z
-  prywatnego storage i cache'owane przez `actions/cache`, patrz
+  prywatnego GitHub Release (tag `Installers`, w tym repo) przez
+  `gh release download` i cache'owane przez `actions/cache`, patrz
   `installers/README.md`.
 - Pipeline CI (`.github/workflows/codesys-ci.yml`) ma 2 joby: `build`
   (kompilacja, artefakt `compiled-project`) → `deploy-test` (install RTE +

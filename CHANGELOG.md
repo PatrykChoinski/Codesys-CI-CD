@@ -4,6 +4,18 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- Instalatory CODESYS przeniesione z pomysłu "link do prywatnego storage +
+  sekrety URL" na **assety prywatnego GitHub Release** (tag `Installers`,
+  assety `CODESYS.64.3.5.22.30.zip` i `CODESYS.Control.RTE.SL.3.5.22.30.zip`)
+  w tym samym repo. Workflow pobiera je przez `gh release download` z
+  wbudowanym `GITHUB_TOKEN` zamiast `Invoke-WebRequest` + sekrety
+  `CODESYS_DEVSYS_INSTALLER_URL` / `CODESYS_RTE_INSTALLER_URL` (usunięte -
+  nieużywane). Eliminuje to problemy z linkami do stron
+  podglądu/udostępniania (Synology Drive) zamiast bezpośrednich plików.
+  `installers/README.md` zaktualizowany o nowy sposób i instrukcję
+  podmiany wersji.
+
 ### Fixed
 - Instalatory CODESYS Store dostarczane są jako **archiwa .zip**, nie
   gołe `.exe` - workflow pobierał plik pod nazwą `...Setup.exe`, ale

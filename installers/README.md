@@ -5,46 +5,45 @@ trakcie CI (git-ignored - nic poza tym plikiem tu nie trafia do repo).
 
 CODESYS Development System i CODESYS Control Win V3 nie są publicznie
 pobieralne - wymagają konta w CODESYS Store i akceptacji licencji, więc
-workflow **nie** ściąga ich bezpośrednio ze store.codesys.com. Zamiast
-tego trzeba je raz pobrać ręcznie i wystawić z prywatnego, dostępnego dla
-runnera miejsca (np. private GitHub Release asset, Azure Blob z SAS token,
-S3 z presigned URL) pod adresami przekazanymi jako sekrety repo:
+workflow **nie** ściąga ich bezpośrednio ze store.codesys.com.
 
-- `CODESYS_DEVSYS_INSTALLER_URL` - **archiwum .zip** z instalatorem
-  CODESYS Development System (V3.5 SP22) - tak CODESYS Store pakuje ten
-  installer do pobrania.
-- `CODESYS_RTE_INSTALLER_URL` - **archiwum .zip** z instalatorem CODESYS
-  Control Win V3 x64 (Control Win SL).
+## Skąd workflow bierze pliki
 
-Workflow zawsze pobiera/cache'uje `.zip` (`actions/cache`, klucz oparty o
-`CODESYS_VERSION`), po czym w osobnym kroku rozpakowuje je
-(`scripts/Expand-Installer.ps1`) i sam znajduje właściwy `.exe` w środku
-(szuka pliku pasującego do `*Setup*.exe`, jeśli w archiwum jest więcej niż
-jeden `.exe`). Ściąganie z prywatnego storage odpala się tylko przy braku
-trafienia w cache; samo rozpakowanie i instalacja (silent install) i tak
-uruchamiają się w każdym jobie od nowa, bo hostowany runner GitHub
-(`windows-latest`) to za każdym razem świeża, jednorazowa maszyna.
+Instalatory (jako `.zip`, tak dostarcza je CODESYS Store) są wgrane jako
+załączniki (assets) do **prywatnego GitHub Release** w tym repozytorium,
+tag **`Installers`**:
 
-## Ważne: URL musi być bezpośrednim linkiem do pliku
+- `CODESYS.64.3.5.22.30.zip` - CODESYS Development System.
+- `CODESYS.Control.RTE.SL.3.5.22.30.zip` - CODESYS Control Win V3 (Control Win SL).
 
-`Invoke-WebRequest` w workflow zapisuje 1:1 to, co dostanie pod danym URL.
-Jeśli URL to link do **strony podglądu/udostępniania** (np. link Synology
-Drive `.../d/s/<id>/<key>` otwierany normalnie w przeglądarce, gdzie plik
-ściąga się dopiero po kliknięciu przycisku "Pobierz"), to zamiast realnego
-`.zip` zostanie zapisana strona HTML - a próba jej rozpakowania kończy się
-czytelnym błędem z `scripts/Assert-ValidZip.ps1` (zamiast dopiero mylącym
-błędem `Expand-Archive`/`Start-Process` przy instalacji).
+Workflow ściąga je stamtąd przez `gh release download` z wbudowanym
+`GITHUB_TOKEN` - brak zewnętrznych sekretów z URL-ami, brak zależności od
+Synology/File Station czy innego hostingu, dostęp działa tak długo jak
+osoba/CI ma dostęp do repo. Pobrane pliki są dodatkowo cache'owane
+(`actions/cache`, klucz oparty o `CODESYS_VERSION`), więc ściąganie z
+Release odpala się tylko przy braku trafienia w cache.
 
-Przed wstawieniem URL do sekretu warto zweryfikować, że to faktycznie
-bezpośredni link do pliku:
+⚠️ **To działa prywatnie tylko jeśli samo repo jest prywatne** - Release i
+jego assety dziedziczą widoczność repozytorium. Jeśli repo kiedyś zostanie
+upublicznione, instalatory (licencjonowane oprogramowanie) staną się
+publicznie pobieralne.
 
-```powershell
-curl.exe -I "<url>"
-```
+## Aktualizacja wersji / podmiana instalatorów
 
-Odpowiedź powinna mieć `Content-Type: application/zip` (albo
-`application/octet-stream`) i `Content-Length` zgodny z rozmiarem archiwum
-- nie `Content-Type: text/html`. Jeśli link Synology zwraca HTML, sprawdź
-w Synology Drive/File Station opcję bezpośredniego linku do pobrania (nie
-link "do podglądu") albo rozważ inny hosting (prywatny GitHub Release
-asset, Azure Blob z SAS token).
+1. Pobierz nowe `.zip` ze store.codesys.com.
+2. Utwórz nowy GitHub Release z nowym tagiem (np. `Installers` można
+   nadpisać nowymi assetami albo utworzyć nowy release na nową wersję) i
+   wgraj tam pliki `.zip` (przez UI: "Attach binaries" - upewnij się, że
+   trafiają w ten box, a nie w pole treści release notes, które ma limit
+   25 MB zamiast 2 GB na asset).
+3. Zaktualizuj w `.github/workflows/codesys-ci.yml`:
+   `CODESYS_VERSION`, `CODESYS_RELEASE_TAG` (jeśli zmieniony) oraz dokładne
+   nazwy `CODESYS_DEVSYS_ASSET` / `CODESYS_RTE_ASSET`.
+
+## Rozpakowywanie
+
+`scripts/Expand-Installer.ps1` waliduje pobrany `.zip`
+(`scripts/Assert-ValidZip.ps1` - sygnatura `PK`), rozpakowuje go i sam
+znajduje właściwy `.exe` w środku (dopasowanie po `*Setup*.exe`, jeśli
+jest ich więcej niż jeden) - jego ścieżkę przekazuje dalej do
+`Install-CodesysDevSystem.ps1` / `Invoke-CodesysDeploy.ps1`.
