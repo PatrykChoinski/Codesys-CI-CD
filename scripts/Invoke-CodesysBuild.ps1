@@ -4,7 +4,7 @@
     Does not touch Docker or any runtime - fails fast on compile errors.
 #>
 param(
-    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe",
+    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-build.xml")
 )

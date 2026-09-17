@@ -5,7 +5,7 @@
     down), collects the runtime log and stops the service.
 #>
 param(
-    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe",
+    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [string]$DeviceAddress = "127.0.0.1",
     [int]$GatewayPort = 1217,

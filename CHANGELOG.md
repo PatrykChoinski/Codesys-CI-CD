@@ -4,6 +4,14 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- Poprawiono numer wersji CODESYS z `3.5.22.0` na faktyczny `3.5.22.30`
+  (potwierdzony na stronach store.codesys.com dla "CODESYS Development
+  System 3" i "CODESYS Control Win SL") w workflow oraz domyślnych
+  ścieżkach `C:\Program Files\CODESYS ...` we wszystkich skryptach.
+- Doprecyzowano w README/CLAUDE.md, że oficjalna nazwa runtime w Store to
+  "CODESYS Control Win SL" (używana zamiennie z "Control Win V3 x64").
+
 ### Changed
 - Zrezygnowano z Dockera i self-hosted runnera na rzecz hostowanych
   runnerów GitHub `windows-latest`: świeża maszyna wirtualna per job daje

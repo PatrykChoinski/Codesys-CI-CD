@@ -5,7 +5,7 @@ Invoked headlessly on the Windows runner, after the DEPLOY stage has
 downloaded and started the application on the runtime running on the
 same machine:
 
-    "C:\\Program Files\\CODESYS 3.5.22.0\\CODESYS\\Common\\CODESYS.exe" ^
+    "C:\\Program Files\\CODESYS 3.5.22.30\\CODESYS\\Common\\CODESYS.exe" ^
         --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_test.py ^
         --scriptargs "<project_path>;<device_address>;<gateway_port>;<report_path>"
 

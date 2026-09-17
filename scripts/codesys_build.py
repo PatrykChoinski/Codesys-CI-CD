@@ -1,9 +1,9 @@
 """
 CODESYS Scripting entry point for the BUILD stage.
 
-Invoked headlessly on the Windows self-hosted runner:
+Invoked headlessly on the Windows runner:
 
-    "C:\\Program Files\\CODESYS 3.5.22.0\\CODESYS\\Common\\CODESYS.exe" ^
+    "C:\\Program Files\\CODESYS 3.5.22.30\\CODESYS\\Common\\CODESYS.exe" ^
         --profile "CODESYS V3.5 SP22" --noUI --runscript=scripts\\codesys_build.py ^
         --scriptargs "<project_path>;<report_path>"
 

@@ -13,7 +13,10 @@ CODESYS Development System (środowisko inżynierskie, w którym otwiera się
 kontenerowej samego IDE. Sterujemy nim headless przez **CODESYS Scripting**
 (Python/IronPython uruchamiany przez `CODESYS.exe --runscript=...`).
 
-Runtime do testów (`CODESYS Control Win V3 x64`) instalujemy **bezpośrednio
+Runtime do testów (w Store występuje pod nazwą **CODESYS Control Win SL**,
+w kodzie/skryptach nazywany zamiennie `CODESYS Control Win V3 x64` - to ten
+sam produkt: V3 to generacja platformy, SL to typ licencji) instalujemy
+**bezpośrednio
 na tym samym runnerze**, bez Dockera i bez self-hosted maszyny: hostowany
 runner GitHub (`windows-latest`) to i tak świeża, jednorazowa maszyna
 wirtualna dla każdego joba, więc sama w sobie daje pełną izolację - kontener

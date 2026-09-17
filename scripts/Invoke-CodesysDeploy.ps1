@@ -9,7 +9,7 @@
     the workflow before calling this script, see installers/README.md).
 #>
 param(
-    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe",
+    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe",
     [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [Parameter(Mandatory = $true)][string]$RteInstallerPath,
     [string]$DeviceAddress = "127.0.0.1",

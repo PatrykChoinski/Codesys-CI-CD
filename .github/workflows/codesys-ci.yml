@@ -9,8 +9,10 @@ on:
 
 env:
   # Bump this when the installers behind the secret URLs change, to
-  # invalidate the actions/cache entry below.
-  CODESYS_VERSION: "3.5.22.0"
+  # invalidate the actions/cache entry below. Matches the "Aktuelle
+  # Version" shown on the CODESYS Store product pages (Development
+  # System / Control Win SL), e.g. 3.5.22.30.
+  CODESYS_VERSION: "3.5.22.30"
 
 jobs:
   build:

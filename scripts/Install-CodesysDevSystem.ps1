@@ -9,7 +9,7 @@
 #>
 param(
     [Parameter(Mandatory = $true)][string]$InstallerPath,
-    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.0\CODESYS\Common\CODESYS.exe"
+    [string]$CodesysExe = "C:\Program Files\CODESYS 3.5.22.30\CODESYS\Common\CODESYS.exe"
 )
 
 $ErrorActionPreference = "Stop"
