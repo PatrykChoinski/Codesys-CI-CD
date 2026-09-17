@@ -5,6 +5,18 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Poprzednia poprawka `--profile=...` nadal nie działała - komunikat błędu
+  CODESYS.exe pokazuje wymagany format z **literalnymi cudzysłowami wokół
+  wartości**: `--profile="profile name"`. PowerShell'owe cudzysłowy przy
+  wywołaniu przez `&` chronią tylko przed rozbiciem po spacji na poziomie
+  własnego parsowania linii poleceń, nie wstawiają cudzysłowu jako
+  znaku do środka argumentu. Dodano `scripts/Invoke-CodesysCli.ps1`
+  (wspólna funkcja dla build/deploy/test), który buduje cały string
+  argumentów ręcznie (`--profile="..." --noUi --runscript="..."
+  --scriptargs="..."`) i uruchamia przez `Start-Process`, dający pełną
+  kontrolę nad cudzysłowami w linii poleceń.
+
+### Fixed
 - Instalacja CODESYS Development System w końcu przeszła (trwała ~13 min -
   to był legalnie długi install kilku zależności typu VC++ redist/.NET,
   nie zawieszenie), ale kompilacja padała z błędem CODESYS.exe: "When

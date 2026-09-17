@@ -14,10 +14,10 @@ New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
 
 Write-Host "== Compiling project =="
 $scriptArgs = "$ProjectPath;$ReportPath"
-& $CodesysExe "--profile=CODESYS V3.5 SP22" --noUI `
-    "--runscript=$(Join-Path $PSScriptRoot 'codesys_build.py')" `
-    "--scriptargs=$scriptArgs"
-$codesysExit = $LASTEXITCODE
+$codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
+    -Profile "CODESYS V3.5 SP22" `
+    -ScriptPath (Join-Path $PSScriptRoot "codesys_build.py") `
+    -ScriptArgs $scriptArgs
 
 if (Test-Path $ReportPath) {
     Write-Host "== Build report =="
