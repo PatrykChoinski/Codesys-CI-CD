@@ -1,0 +1,46 @@
+name: CODESYS CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+jobs:
+  build-deploy-test:
+    # Requires a self-hosted Windows runner with:
+    #   - CODESYS Development System V3.5 SP22 installed
+    #   - Docker Desktop (Linux containers / WSL2) installed and running
+    # Register it with label "codesys-windows".
+    runs-on: [self-hosted, windows, codesys-windows]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run CODESYS CI pipeline (build image, deploy, smoke test)
+        shell: pwsh
+        env:
+          CODESYS_RTE_INSTALLER: ${{ secrets.CODESYS_RTE_INSTALLER_FILENAME }}
+        run: |
+          ./scripts/Invoke-CodesysCI.ps1 -CodesysRteInstaller $env:CODESYS_RTE_INSTALLER
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codesys-ci-report
+          path: |
+            reports/junit-codesys-ci.xml
+            reports/codesys-rte.log
+          if-no-files-found: warn
+
+      - name: Publish test summary
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: CODESYS smoke test
+          path: reports/junit-codesys-ci.xml
+          reporter: java-junit
+          fail-on-error: true

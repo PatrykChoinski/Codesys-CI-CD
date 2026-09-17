@@ -5,5 +5,10 @@
 
 # CI artifacts
 /build/
-/reports/
+/reports/*
+!/reports/.gitkeep
 *.log
+
+# CODESYS runtime installer (licensed download, not committed to git)
+docker/installers/*
+!docker/installers/.gitkeep

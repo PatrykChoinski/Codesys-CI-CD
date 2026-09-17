@@ -1,0 +1,18 @@
+# Local helper for manual testing of the runtime image.
+# Usage:
+#   docker compose -f docker/docker-compose.yml build \
+#       --build-arg CODESYS_RTE_INSTALLER=<installer-filename>
+#   docker compose -f docker/docker-compose.yml up -d
+services:
+  codesys-rte:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CODESYS_RTE_INSTALLER: ${CODESYS_RTE_INSTALLER}
+    image: codesys-rte:3.5.22
+    container_name: codesys-rte
+    ports:
+      - "1217:1217"
+      - "4840:4840"
+      - "8080:8080"
