@@ -55,6 +55,34 @@ jobs:
         shell: pwsh
         run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
+      - name: Cache CODESYS Control Win V3 installer archive
+        id: cache-rte
+        uses: actions/cache@v4
+        with:
+          path: installers\${{ env.CODESYS_RTE_ASSET }}
+          key: codesys-rte-installer-${{ env.CODESYS_VERSION }}
+
+      - name: Download CODESYS Control Win V3 installer archive
+        if: steps.cache-rte.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          New-Item -ItemType Directory -Force -Path installers | Out-Null
+          gh release download "$env:CODESYS_RELEASE_TAG" --repo "${{ github.repository }}" `
+            --pattern "$env:CODESYS_RTE_ASSET" --dir installers --clobber
+
+      - name: Extract CODESYS Control Win V3 installer
+        id: extract-rte
+        shell: pwsh
+        run: |
+          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath "installers\$env:CODESYS_RTE_ASSET" -DestinationDir installers\rte
+          "exe_path=$exePath" >> $env:GITHUB_OUTPUT
+
+      - name: Install CODESYS Control Win V3 (registers the device description needed to compile)
+        shell: pwsh
+        run: ./scripts/Install-CodesysRuntime.ps1 -InstallerPath "${{ steps.extract-rte.outputs.exe_path }}"
+
       - name: Compile project
         shell: pwsh
         run: ./scripts/Invoke-CodesysBuild.ps1

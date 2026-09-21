@@ -5,6 +5,19 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Job `build` na CI padał na kompilacji: `Build: Error: C188: Device not
+  installed to the system. No code generation possible.` + kaskada
+  `Could not open library '#...'` dla placeholderów (`IoStandard`,
+  `CmpLog`, `CAA Types`, ...). Świeży Dev System nie ma zarejestrowanego
+  opisu urządzenia dla targetu projektu (CODESYS Control Win V3 x64) -
+  ten opis rejestruje się dopiero przy instalacji samego RTE. Job `build`
+  instalował tylko Dev System, nigdy RTE (to robił dotąd wyłącznie
+  `deploy-test`). Dodano do joba `build` te same kroki cache/pobrania/
+  instalacji CODESYS Control Win V3 co w `deploy-test`, przed
+  kompilacją - RTE nie jest tam uruchamiany, tylko instalowany (co
+  rejestruje potrzebny opis urządzenia).
+
+### Fixed
 - Przetestowano lokalnie (na maszynie z realnie zainstalowanym CODESYS,
   zamiast czekać ~15 min na każdy przebieg CI) i znaleziono dwa kolejne
   realne błędy:

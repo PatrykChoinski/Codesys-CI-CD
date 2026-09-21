@@ -61,7 +61,12 @@ się na push/PR do `master` oraz ręcznie (`workflow_dispatch`), na hostowanych
 runnerach `windows-latest`, jako dwa joby:
 
 1. **build** — cache/pobranie instalatora CODESYS Development System,
-   instalacja, otwarcie i kompilacja projektu
+   instalacja, **oraz instalacja CODESYS Control Win V3** (RTE) - nie po
+   to by go uruchamiać, ale bo dopiero jej instalator rejestruje w Dev
+   Systemie opis urządzenia (device description) targetowanego przez
+   projekt; bez tego kompilacja pada z `Device not installed to the
+   system` i kaskadą nierozwiązanych bibliotek placeholderowych - po czym
+   otwarcie i kompilacja projektu
    ([`codesys_build.py`](scripts/codesys_build.py)). Publikuje
    `reports/junit-build.xml` jako artefakt oraz sam skompilowany projekt
    (razem z `*.precompilecache`) jako artefakt `compiled-project`, który
