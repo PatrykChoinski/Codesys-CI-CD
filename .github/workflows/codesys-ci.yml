@@ -28,25 +28,19 @@ jobs:
     # No runtime install needed here: the archive itself carries the
     # device description, so this job stays fast and independent.
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Caches the actual installed Program Files directory, not just the
-      # installer - the install itself takes ~14 min (several MSI runs),
-      # so on a cache hit we skip download/extract/install entirely.
-      # deploy-test needs: build, so it starts only after this job's cache
-      # save completes and can reuse the same entry - only the very first
-      # run (or a version bump) pays the install cost twice.
-      - name: Cache CODESYS Development System installation
-        id: cache-devsys-install
-        uses: actions/cache@v4
-        with:
-          path: C:\Program Files\CODESYS ${{ env.CODESYS_VERSION }}
-          key: codesys-devsys-install-${{ env.CODESYS_VERSION }}
-
+      # Only the downloaded installer zip is cached, not the installed
+      # directory itself - tried that, but CODESYS.exe hung indefinitely
+      # (looked like an unresolvable "Select Profile" prompt) when the
+      # Dev System was restored from a files-only cache instead of run
+      # through its real installer. Whatever registry/profile state the
+      # installer sets up, a file copy doesn't reproduce it, so the
+      # ~14 min install itself still has to run in every job for now.
       - name: Cache CODESYS Development System installer archive
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         id: cache-devsys
         uses: actions/cache@v4
         with:
@@ -54,7 +48,7 @@ jobs:
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
       - name: Download CODESYS Development System installer archive
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true' && steps.cache-devsys.outputs.cache-hit != 'true'
+        if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,7 +58,6 @@ jobs:
             --pattern "$env:CODESYS_DEVSYS_ASSET" --dir installers --clobber
 
       - name: Extract CODESYS Development System installer
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         id: extract-devsys
         shell: pwsh
         run: |
@@ -72,7 +65,6 @@ jobs:
           "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         shell: pwsh
         run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
@@ -91,19 +83,12 @@ jobs:
   deploy-test:
     needs: build
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache CODESYS Development System installation
-        id: cache-devsys-install
-        uses: actions/cache@v4
-        with:
-          path: C:\Program Files\CODESYS ${{ env.CODESYS_VERSION }}
-          key: codesys-devsys-install-${{ env.CODESYS_VERSION }}
-
       - name: Cache CODESYS Development System installer archive
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         id: cache-devsys
         uses: actions/cache@v4
         with:
@@ -111,7 +96,7 @@ jobs:
           key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
 
       - name: Download CODESYS Development System installer archive
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true' && steps.cache-devsys.outputs.cache-hit != 'true'
+        if: steps.cache-devsys.outputs.cache-hit != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -121,7 +106,6 @@ jobs:
             --pattern "$env:CODESYS_DEVSYS_ASSET" --dir installers --clobber
 
       - name: Extract CODESYS Development System installer
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         id: extract-devsys
         shell: pwsh
         run: |
@@ -129,7 +113,6 @@ jobs:
           "exe_path=$exePath" >> $env:GITHUB_OUTPUT
 
       - name: Install CODESYS Development System
-        if: steps.cache-devsys-install.outputs.cache-hit != 'true'
         shell: pwsh
         run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 

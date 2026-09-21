@@ -4,6 +4,20 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Reverted
+- Cache całego katalogu instalacji Dev System (dodany wcześniej) wycofany
+  - `CODESYS.exe` wisiał w nieskończoność (52+ min zanim ręcznie anulowano
+  run) po restarcie z cache samych plików, najpewniej na niewidzialnym
+  dialogu "Select Profile" - instalator ustawia coś (rejestr?) czego
+  samo skopiowanie plików nie odtwarza. Zostaje tylko cache pobranego
+  `.zip` (bezpieczny, nie wpływa na sam install), a właściwa instalacja
+  (~14 min) znowu uruchamia się w każdym jobie.
+
+### Added
+- `timeout-minutes` na poziomie joba (`build`: 30, `deploy-test`: 45) -
+  domyślny limit GitHub Actions to 6h; po powyższym zawieszeniu (musiałem
+  ręcznie zauważyć i anulować po 52 min) to zbyt duży margines błędu.
+
 ### Fixed
 - Cache instalacji Dev System działa (`deploy-test` doszedł do kroku
   deploy w 1m43s zamiast 15m23s - download/extract/install całkowicie
