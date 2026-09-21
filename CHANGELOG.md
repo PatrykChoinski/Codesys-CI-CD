@@ -4,6 +4,25 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- `deploy-test` w CI padał na `KeyError: Name 'Gateway-1' not found.` -
+  `configure_device_gateway()` zakładał, że gateway o tej nazwie zawsze
+  istnieje (tak było na mojej maszynie testowej z historią użycia), ale
+  świeży runner CI ma zero zarejestrowanych gateway. Naprawiono: bierze
+  pierwszy istniejący gateway, a jeśli nie ma żadnego, tworzy nowy
+  TCP/IP na `localhost:1217` (potwierdzone na przykładzie z forum
+  CODESYS).
+
+### Changed
+- Dodano cache całego zainstalowanego katalogu Dev System
+  (`actions/cache` na `C:\Program Files\CODESYS <wersja>`, oba joby) -
+  instalacja (~14 min) powtarzała się w każdym z 2 jobów. Job `deploy-test`
+  (`needs: build`) startuje po zapisaniu cache przez `build`, więc powinien
+  dostać ją z cache w tym samym uruchomieniu. Nie jest to 100% pewne
+  (cache to same pliki, nie rejestr/SCM - jeśli coś zależy od wpisów
+  rejestru zrobionych przez instalator, może wyjść inny błąd przy trafieniu
+  w cache) - do zweryfikowania w praktyce.
+
 ### Changed
 - Job `build` (dodana wcześniej instalacja RTE w tym jobie, żeby
   zarejestrować opis urządzenia) okazała się no-opem w CI - usługa RTE
