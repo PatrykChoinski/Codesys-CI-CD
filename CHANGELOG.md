@@ -5,6 +5,13 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- `Expand-Installer.ps1`: archiwum RTE zawiera dwa pliki `.exe` poza
+  `ISSetupPrerequisites` - wariant 32-bit (`CODESYS Control RTE
+  3.5.22.30.exe`) i 64-bit (`CODESYS Control RTE 64 3.5.22.30.exe`).
+  Dodano dopasowanie po `*64*` (sprawdzane przed `*Setup*`), żeby wybrać
+  właściwy wariant x64 zamiast przerywać z błędem "multiple candidates".
+
+### Fixed
 - Job `build` na CI padał na kompilacji: `Build: Error: C188: Device not
   installed to the system. No code generation possible.` + kaskada
   `Could not open library '#...'` dla placeholderów (`IoStandard`,

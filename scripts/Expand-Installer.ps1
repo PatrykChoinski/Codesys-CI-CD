@@ -36,14 +36,20 @@ $chosen = $null
 if ($candidates.Count -eq 1) {
     $chosen = $candidates[0]
 } else {
+    # Some CODESYS installer zips bundle both the 32-bit and 64-bit
+    # variant (e.g. "CODESYS Control RTE 3.5.22.30.exe" vs "CODESYS
+    # Control RTE 64 3.5.22.30.exe") - we always target x64.
+    $x64Matches = $candidates | Where-Object { $_.Name -match "64" }
     $setupMatches = $candidates | Where-Object { $_.Name -match "Setup" }
-    if ($setupMatches.Count -eq 1) {
+    if ($x64Matches.Count -eq 1) {
+        $chosen = $x64Matches[0]
+    } elseif ($setupMatches.Count -eq 1) {
         $chosen = $setupMatches[0]
     } else {
         $list = ($candidates | ForEach-Object { $_.FullName }) -join "`n  "
         throw @"
 Found multiple candidate .exe files after extracting '$ZipPath' (outside
-ISSetupPrerequisites) and none/more than one matched '*Setup*'
+ISSetupPrerequisites) and none/more than one matched '*64*' or '*Setup*'
 unambiguously - pick the right one and adjust Expand-Installer.ps1:
   $list
 "@
