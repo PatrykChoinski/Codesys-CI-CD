@@ -20,7 +20,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptArgsValue = ($ScriptArguments | ForEach-Object { '"{0}"' -f $_ }) -join ' '
-$argumentString = "--profile=`"$Profile`" --runscript=`"$ScriptPath`" --scriptargs:'$scriptArgsValue' --noUI"
+# --textPrompts prevents confirmation dialogs (e.g. login warnings) from
+# silently blocking forever in headless mode - without it, some of these
+# still pop up even under --noUI and just hang since nothing can click them.
+$argumentString = "--profile=`"$Profile`" --runscript=`"$ScriptPath`" --scriptargs:'$scriptArgsValue' --noUI --textPrompts"
 
 $proc = Start-Process -FilePath $CodesysExe -ArgumentList $argumentString -Wait -PassThru -NoNewWindow
 return $proc.ExitCode

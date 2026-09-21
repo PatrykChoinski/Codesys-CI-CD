@@ -4,7 +4,37 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- Job `build` (dodana wcześniej instalacja RTE w tym jobie, żeby
+  zarejestrować opis urządzenia) okazała się no-opem w CI - usługa RTE
+  była już zainstalowana przez sam instalator Dev System. Zamiast tego
+  projekt teraz kompiluje/loguje się przez **`CICD.projectarchive`**
+  (nowy plik, wygenerowany z `CICD.project` przez nowy
+  `scripts/Update-ProjectArchive.ps1` - trzeba go regenerować i commitować
+  po każdej zmianie projektu). `projects.open_archive()` samo instaluje
+  opis urządzenia przy otwarciu, więc job `build` w ogóle nie potrzebuje
+  już runtime. Usunięto z workflow zbędne kroki instalacji RTE w jobie
+  `build` oraz przekazywanie artefaktu `compiled-project` między jobami
+  (każdy job otwiera to samo `.projectarchive` z checkout).
+- `scripts/codesys_build.py` / `codesys_deploy.py` / `codesys_test.py`:
+  wydzielono wspólne helpery do nowego `scripts/codesys_common.py`
+  (`write_junit`, `configure_device_gateway`).
+
 ### Fixed
+- Nawet z zarejestrowanym opisem urządzenia, login nadal padał: najpierw
+  `Gateway not configured properly` (świeżo otwarte archiwum ma zerowy
+  GUID gateway na Device - `set_gateway_and_address` z samym IP też nie
+  działa, bo lokalny runtime jest adresowany krótkim kodem przypisywanym
+  przez gateway, nie adresem IP), potem `Currently, the user management is
+  not activated on the device` (CODESYS Control >= SP17 domyślnie wymaga
+  aktywowanego User Management, a świeży runtime go nie ma - interaktywne
+  pytanie o aktywację nie da się obsłużyć headless, kończy się `The handle
+  is invalid` nawet z `--textPrompts`). Naprawiono: `configure_device_gateway()`
+  skanuje sieć przez `online.gateways['Gateway-1'].perform_network_scan()`
+  i ustawia znaleziony adres (potwierdzone na oficjalnym przykładzie z forum
+  CODESYS); `Install-CodesysRuntime.ps1` odkomentowuje
+  `SECURITY.UserMgmtEnforce=NO` w każdym znalezionym `CODESYSControl.cfg`
+  przed startem usługi (potwierdzone w oficjalnej dokumentacji CODESYS).
 - `Expand-Installer.ps1`: archiwum RTE zawiera dwa pliki `.exe` poza
   `ISSetupPrerequisites` - wariant 32-bit (`CODESYS Control RTE
   3.5.22.30.exe`) i 64-bit (`CODESYS Control RTE 64 3.5.22.30.exe`).

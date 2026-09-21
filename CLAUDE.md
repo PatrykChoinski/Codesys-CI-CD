@@ -21,8 +21,13 @@ Zasady pracy Claude w tym repozytorium.
   `gh release download` i cache'owane przez `actions/cache`, patrz
   `installers/README.md`.
 - Pipeline CI (`.github/workflows/codesys-ci.yml`) ma 2 joby: `build`
-  (kompilacja, artefakt `compiled-project`) → `deploy-test` (install RTE +
-  login/download/start + smoke test stanu RUN w jednym jobie, bo oba kroki
-  potrzebują tej samej żywej usługi runtime na tej samej VM). Szczegóły w
+  (tylko kompilacja `CICD.projectarchive`, bez runtime) → `deploy-test`
+  (install RTE + login/download/start + smoke test stanu RUN w jednym
+  jobie, bo oba kroki potrzebują tej samej żywej usługi runtime na tej
+  samej VM). Szczegóły w `README.md`.
+- **`CICD.projectarchive` musi być zregenerowany i commitowany razem z
+  `CICD.project` po każdej jego zmianie** (`./scripts/Update-ProjectArchive.ps1`,
+  lokalnie, na maszynie z zainstalowanym CODESYS) - świeży CI install nie
+  ma zarejestrowanego opisu urządzenia, a archiwum go dostarcza. Patrz
   `README.md`.
 - Pełny opis architektury i uzasadnienie decyzji: patrz `README.md`.

@@ -20,7 +20,31 @@ function Find-CodesysControlService {
     Get-Service | Where-Object { $_.DisplayName -like "*CODESYS Control*" } | Select-Object -First 1
 }
 
+function Disable-MandatoryUserManagement {
+    # CODESYS Control >= SP17 defaults to requiring an activated device
+    # user management before any engineering login is accepted. On a
+    # fresh install nobody has activated it yet, and the interactive
+    # "would you like to activate it now? create an admin user..." prompt
+    # this triggers cannot be answered in headless CI (it just fails with
+    # "The handle is invalid" even with --textPrompts). The documented
+    # fix is this config line - normally shipped commented out - in every
+    # CODESYSControl.cfg found under the install:
+    # https://content.helpme-codesys.com/en/CODESYS%20Development%20System/_cds_sec_faq_deactivating_usermanagement.html
+    Write-Host "== Disabling mandatory device user management (headless CI can't answer the interactive activation prompt) =="
+    $cfgFiles = Get-ChildItem -Path "C:\ProgramData\CODESYS", "C:\Program Files", "C:\Program Files (x86)" `
+        -Recurse -Filter "CODESYSControl.cfg" -ErrorAction SilentlyContinue
+    foreach ($f in $cfgFiles) {
+        $content = Get-Content -Path $f.FullName
+        if ($content -match "^;SECURITY\.UserMgmtEnforce=NO") {
+            $content -replace '^;SECURITY\.UserMgmtEnforce=NO', 'SECURITY.UserMgmtEnforce=NO' | Set-Content -Path $f.FullName
+            Write-Host "Patched $($f.FullName)"
+        }
+    }
+}
+
 $service = Find-CodesysControlService
+$wasAlreadyRunning = $service -and $service.Status -eq "Running"
+
 if (-not $service) {
     if (-not (Test-Path $InstallerPath)) {
         throw "Installer not found at $InstallerPath"
@@ -44,9 +68,15 @@ if (-not $service) {
     Write-Host "Service '$($service.Name)' already installed, skipping install."
 }
 
+Disable-MandatoryUserManagement
+
 $serviceName = $service.Name
 Set-Service -Name $serviceName -StartupType Automatic
-Start-Service -Name $serviceName
+if ($wasAlreadyRunning) {
+    Restart-Service -Name $serviceName -Force
+} else {
+    Start-Service -Name $serviceName
+}
 
 $deadline = (Get-Date).AddSeconds(60)
 while ((Get-Service -Name $serviceName).Status -ne "Running") {

@@ -10,19 +10,21 @@ param(
     # shortcut arguments show the authoritative string) - for 3.5.22.30
     # that's "...Patch 3", NOT just "CODESYS V3.5 SP22".
     [string]$Profile = "CODESYS V3.5 SP22 Patch 3",
-    [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
+    [string]$ArchivePath = (Join-Path $PSScriptRoot "..\CICD.projectarchive"),
+    [string]$ExtractDir = (Join-Path $PSScriptRoot "..\work\test"),
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-test.xml")
 )
 
 $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
+New-Item -ItemType Directory -Force -Path $ExtractDir | Out-Null
 
 try {
     Write-Host "== Running CODESYS Scripting smoke test =="
     $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
         -Profile $Profile `
         -ScriptPath (Join-Path $PSScriptRoot "codesys_test.py") `
-        -ScriptArguments @($ProjectPath, $ReportPath)
+        -ScriptArguments @($ArchivePath, $ExtractDir, $ReportPath)
 
     if (Test-Path $ReportPath) {
         Write-Host "== Test report =="
