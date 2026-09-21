@@ -40,6 +40,14 @@ workflow) and update the caller's -ArgumentList.
 "@
 }
 
-if ($proc.ExitCode -ne 0) {
+# 3010/3011 = ERROR_SUCCESS_REBOOT_REQUIRED/INITIATED - genuine Windows
+# Installer success codes, just noting a reboot would normally be needed
+# to finish. Irrelevant here: this is a single-use CI VM torn down right
+# after the job, and CODESYS.exe/the service work fine without it.
+$successCodes = @(0, 3010, 3011)
+if ($successCodes -notcontains $proc.ExitCode) {
     throw "'$InstallerPath' exited with code $($proc.ExitCode) (args: $($ArgumentList -join ' '))"
+}
+if ($proc.ExitCode -ne 0) {
+    Write-Host "'$InstallerPath' exited with code $($proc.ExitCode) (reboot-required success code, ignoring)"
 }

@@ -5,6 +5,19 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Fixed
+- Cache instalacji Dev System działa (`deploy-test` doszedł do kroku
+  deploy w 1m43s zamiast 15m23s - download/extract/install całkowicie
+  pominięte), ale jak podejrzewałem, sama usługa RTE dołączona przez
+  installer Dev System **nie przetrwała** cache'owania samych plików
+  (rejestracja usługi Windows to wpis SCM, nie plik) - `Install-CodesysRuntime.ps1`
+  poprawnie wykrył brak usługi i zainstalował właściwy, samodzielny RTE
+  z naszego zip-a, który jednak zakończył się kodem **3010**
+  (`ERROR_SUCCESS_REBOOT_REQUIRED` - prawidłowy kod sukcesu Windows
+  Installera, nie błąd). `Start-SilentInstall.ps1` traktował każdy
+  niezerowy kod jako porażkę - teraz akceptuje 3010/3011 jako sukces
+  (restart nieistotny na jednorazowej VM CI).
+
+### Fixed
 - `deploy-test` w CI padał na `KeyError: Name 'Gateway-1' not found.` -
   `configure_device_gateway()` zakładał, że gateway o tej nazwie zawsze
   istnieje (tak było na mojej maszynie testowej z historią użycia), ale
