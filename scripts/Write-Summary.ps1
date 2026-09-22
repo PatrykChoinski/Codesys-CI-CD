@@ -26,7 +26,7 @@ function Get-JUnitCases {
 }
 
 $stages = @(
-    @{ Name = "Build (kompilacja CICD.projectarchive)"; File = "junit-build.xml" }
+    @{ Name = "Build (kompilacja PilaJednosuportowa.project)"; File = "junit-build.xml" }
     @{ Name = "Deploy (login / download / start)"; File = "junit-deploy.xml" }
     @{ Name = "Test (smoke test stanu RUN)"; File = "junit-test.xml" }
 )

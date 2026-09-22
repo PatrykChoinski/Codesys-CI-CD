@@ -5,10 +5,10 @@ Invoked headlessly, after the DEPLOY stage has downloaded and started the
 application, and after the BUILD stage has already "primed" the
 machine's device repository (see codesys_build.py's docstring):
     CODESYS.exe --profile="CODESYS V3.5 SP22 Patch 3" --runscript="scripts\\codesys_test.py" ^
-        --scriptargs:'<project_path> <report_path>' --noUI
+        --scriptargs:'<project_path> <report_path> [encryption_password]' --noUI
 
 Responsibilities:
-  1. Open the live CICD.project, pointing the Device at the local
+  1. Open the live PilaJednosuportowa.project, pointing the Device at the local
      runtime same as codesys_deploy.py (a freshly opened project has no
      gateway/address set at all).
   2. Log in with always_update=True (same as DEPLOY - using False here
@@ -38,11 +38,12 @@ from codesys_common import write_junit, configure_device_gateway
 
 def main():
     project_path, report_path = sys.argv[1], sys.argv[2]
+    encryption_password = sys.argv[3] if len(sys.argv) > 3 else ""
 
     cases = []
     t0 = time.time()
     try:
-        project = projects.open(project_path)
+        project = projects.open(project_path, encryption_password=encryption_password)
         configure_device_gateway(project)
 
         app = project.active_application

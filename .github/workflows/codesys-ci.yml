@@ -15,6 +15,14 @@ env:
   CODESYS_RELEASE_TAG: "Installers"
   CODESYS_DEVSYS_ASSET: "CODESYS.64.3.5.22.30.zip"
   CODESYS_RTE_ASSET: "CODESYS.Control.RTE.SL.3.5.22.30.zip"
+  # Project archive is only used to "prime" the device repository (see
+  # scripts/codesys_build.py) - it changes whenever the project's
+  # target/device or bundled libraries do, so it's re-uploaded to this
+  # release asset (never cached, unlike the installers, to avoid ever
+  # priming with a stale copy) rather than committed to git (~120 MB,
+  # over GitHub's 100 MB per-file limit). See README.md.
+  PROJECT_ARCHIVE_RELEASE_TAG: "ProjectArchive"
+  PROJECT_ARCHIVE_ASSET: "PilaJednosuportowa.projectarchive"
 
 jobs:
   build-deploy-test:
@@ -71,8 +79,23 @@ jobs:
         shell: pwsh
         run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
+      # Downloaded fresh every run (not cached like the installer zips
+      # above) - it's the one file that changes as the project evolves,
+      # so caching it risks priming with a stale device/target.
+      - name: Download project archive (device priming asset)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$env:PROJECT_ARCHIVE_RELEASE_TAG" --repo "${{ github.repository }}" `
+            --pattern "$env:PROJECT_ARCHIVE_ASSET" --dir . --clobber
+
       - name: Compile project
         shell: pwsh
+        env:
+          # Unlocks the encrypted PilaJednosuportowa.projectarchive - see
+          # scripts/codesys_build.py. Never logged/echoed.
+          CODESYS_PROJECT_PASSWORD: ${{ secrets.PROJECT_PASSWORD }}
         run: ./scripts/Invoke-CodesysBuild.ps1
 
       - name: Upload build report
@@ -109,6 +132,8 @@ jobs:
 
       - name: Deploy application to runtime (login, download, start)
         shell: pwsh
+        env:
+          CODESYS_PROJECT_PASSWORD: ${{ secrets.PROJECT_PASSWORD }}
         run: ./scripts/Invoke-CodesysDeploy.ps1 -RteInstallerPath "${{ steps.extract-rte.outputs.exe_path }}"
 
       - name: Upload deploy report
@@ -121,6 +146,8 @@ jobs:
 
       - name: Run smoke test
         shell: pwsh
+        env:
+          CODESYS_PROJECT_PASSWORD: ${{ secrets.PROJECT_PASSWORD }}
         run: ./scripts/Invoke-CodesysTest.ps1
 
       - name: Upload test report

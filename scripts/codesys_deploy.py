@@ -6,10 +6,10 @@ running on this same machine, and after the BUILD stage has already
 "primed" the machine's device repository (see codesys_build.py's
 docstring):
     CODESYS.exe --profile="CODESYS V3.5 SP22 Patch 3" --runscript="scripts\\codesys_deploy.py" ^
-        --scriptargs:'<project_path> <report_path>' --noUI
+        --scriptargs:'<project_path> <report_path> [encryption_password]' --noUI
 
 Responsibilities:
-  1. Open the live CICD.project (not the archive - the device it needs
+  1. Open the live PilaJednosuportowa.project (not the archive - the device it needs
      is already registered machine-wide by the BUILD stage's priming).
   2. Point the Device at the local runtime (see
      codesys_common.configure_device_gateway - a freshly opened project
@@ -42,11 +42,12 @@ from codesys_common import write_junit, configure_device_gateway
 
 def main():
     project_path, report_path = sys.argv[1], sys.argv[2]
+    encryption_password = sys.argv[3] if len(sys.argv) > 3 else ""
 
     cases = []
     t0 = time.time()
     try:
-        project = projects.open(project_path)
+        project = projects.open(project_path, encryption_password=encryption_password)
         configure_device_gateway(project)
 
         app = project.active_application

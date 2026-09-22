@@ -4,10 +4,47 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- Zastąpiono testowy projekt `CICD.project`/`CICD.projectarchive`
+  prawdziwym projektem `PilaJednosuportowa.project`/
+  `PilaJednosuportowa.projectarchive` - zaktualizowano wszystkie
+  domyślne ścieżki w skryptach (`Invoke-CodesysBuild.ps1`,
+  `Invoke-CodesysDeploy.ps1`, `Invoke-CodesysTest.ps1`,
+  `Update-ProjectArchive.ps1`) oraz komentarze/dokumentację
+  (`README.md`, `CLAUDE.md`). Archiwum tego projektu ma ~120 MB - ponad
+  limit 100 MB na plik w commicie do GitHub - więc przestało być
+  commitowane do git (dodane do `.gitignore`) i jest teraz wgrywane jako
+  asset prywatnego GitHub Release (nowy tag `ProjectArchive`), skąd
+  workflow ściąga je świeżo przy każdym uruchomieniu (bez cache'owania,
+  w przeciwieństwie do instalatorów CODESYS - to ten plik zmienia się
+  razem z projektem, więc cache mógłby "primować" nieaktualnym
+  urządzeniem).
+
 ### Fixed
-- Naprawiono błąd składni ST w `CICD.project` (`C189`/`C9`/`C190` -
+- Naprawiono błąd składni ST w projekcie (`C189`/`C9`/`C190` -
   nieoczekiwany token `!` zamiast `;`), który celowo wprowadzono wcześniej
-  do testu ścieżki błędu w CI. Kompilacja powinna teraz przechodzić.
+  do testu ścieżki błędu w CI (dotyczyło jeszcze poprzedniego, testowego
+  projektu `CICD.project`). Kompilacja powinna teraz przechodzić.
+- Lokalny test kompilacji `PilaJednosuportowa.project` padał na
+  `StandardError: Operation cancelled by user.` w `projects.open_archive()`
+  - okazało się, że projekt/archiwum jest zaszyfrowane hasłem (dialog
+  "Encryption Password", który `--noUI`/`--textPrompts` nie może
+  obsłużyć headless). Naprawiono przez dodanie parametru
+  `encryption_password` do wszystkich wywołań `projects.open()` /
+  `projects.open_archive()` (`codesys_build.py`, `codesys_deploy.py`,
+  `codesys_test.py`, `codesys_save_archive.py`), zasilanego z nowego
+  sekretu repo `PROJECT_PASSWORD` przez zmienną env
+  `CODESYS_PROJECT_PASSWORD` we wszystkich trzech krokach workflow.
+- Po naprawie hasła, lokalny test kompilacji przechodził (`0 errors, 95
+  warnings: Ready for download`), ale cały etap build i tak kończył się
+  błędem - `project.save()` w `codesys_build.py` (optymalizacja: zapisuje
+  skompilowany stan na dysk, żeby DEPLOY nie musiał kompilować od nowa)
+  padał z `StandardError: The project could not be saved... This project
+  has been opened in read-only mode`, bo prawdziwy projekt ma ustawiony
+  status "Released" w CODESYS (tryb tylko-do-odczytu). `project.save()`
+  jest teraz owinięty w osobny try/except, który tylko loguje ostrzeżenie
+  - nieudany zapis (best-effort, opcjonalny) nie może już zmieniać
+  udanej kompilacji w failed build.
 
 ### Changed
 - `CICD.projectarchive` używane teraz TYLKO do "primingu" repozytorium
