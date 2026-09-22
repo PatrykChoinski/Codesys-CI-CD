@@ -4,6 +4,19 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- Pierwszy przebieg pojedynczego joba: build i deploy przeszły (deploy
+  poprawnie potwierdził stan RUN po `start()`), ale `test` znowu znalazł
+  aplikację w stanie `stop`, mimo "The application is up to date". Jedyna
+  różnica względem deployu: `codesys_test.py` logował się z
+  `always_update=False`. Skoro test otwiera `.projectarchive` do INNEGO
+  `extract_dir` niż deploy, wynikowa aplikacja rozruchowa najpewniej nigdy
+  nie jest bajt-identyczna nawet z tego samego źródła - z `False` CODESYS
+  zdaje się w takiej sytuacji zatrzymywać aplikację zamiast zostawić ją
+  bez zmian. Zmieniono na `always_update=True` (jak w deployu, zgodnie z
+  oficjalnym przykładem z forum) i dodano taki sam retry `start()` +
+  odpytywanie stanu przez do 10s jak w deployu.
+
 ### Changed
 - Pipeline CI z powrotem jako **1 job** (`build-deploy-test`) zamiast
   2 (`build` → `deploy-test`) - skoro cache instalacji Dev System między

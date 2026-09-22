@@ -12,9 +12,15 @@ Responsibilities:
      registered), pointing the Device at the local runtime same as
      codesys_deploy.py (this stage opens its own separate extract_dir, so
      the gateway/address isn't already set from the DEPLOY stage's run).
-  2. Log in to the already-running application without forcing a
-     re-download.
-  3. Verify the application reports RUN state.
+  2. Log in (with always_update=True, same as DEPLOY - using False here
+     reliably left the application in STOP state even though the code
+     was reported "up to date": this stage's own open_archive/generate_code
+     run into a different extract_dir than DEPLOY's, so the resulting
+     boot application is very likely never byte-identical even from the
+     same source, and CODESYS seems to treat that as license to stop the
+     app when told not to update it).
+  3. Start the application if it isn't already running, then verify it
+     reports RUN state.
   4. Log out and write a JUnit-style XML report consumed by the CI job.
 
 Extend this script with additional test cases (reading/forcing symbols
@@ -44,14 +50,23 @@ def main():
 
         app = project.active_application
         onlineapp = online.create_online_application(app)
-        onlineapp.login(OnlineChangeOption.Try, False)
+        onlineapp.login(OnlineChangeOption.Try, True)
 
-        is_running = onlineapp.application_state == ApplicationState.run
+        if not onlineapp.application_state == ApplicationState.run:
+            onlineapp.start()
+
+        deadline = time.time() + 10
+        state = onlineapp.application_state
+        while state != ApplicationState.run and time.time() < deadline:
+            time.sleep(1)
+            state = onlineapp.application_state
+
+        is_running = state == ApplicationState.run
 
         cases.append({
             "name": "plc_in_run_state",
             "status": "pass" if is_running else "fail",
-            "message": "" if is_running else "Application state was %s, expected run" % onlineapp.application_state,
+            "message": "" if is_running else "Application state was %s, expected run" % state,
             "time": time.time() - t0,
         })
 
