@@ -21,16 +21,18 @@ Zasady pracy Claude w tym repozytorium.
   `gh release download` i cache'owane przez `actions/cache`, patrz
   `installers/README.md`.
 - Pipeline CI (`.github/workflows/codesys-ci.yml`) to **1 job**
-  (`build-deploy-test`) z 3 etapami po sobie: kompilacja
-  `CICD.projectarchive` → install RTE + login/download/start →
+  (`build-deploy-test`) z 3 etapami po sobie: kompilacja żywego
+  `CICD.project` → install RTE + login/download/start →
   smoke test stanu RUN. Był kiedyś podzielony na 2 joby, ale Dev System
   nie da się bezpiecznie cache'ować między jobami (próba się nie
   powiodła - patrz CHANGELOG), więc 2 joby oznaczały instalowanie go
   dwa razy (~26 zamiast ~13 min) - stąd z powrotem 1 job. Szczegóły w
   `README.md`.
-- **`CICD.projectarchive` musi być zregenerowany i commitowany razem z
-  `CICD.project` po każdej jego zmianie** (`./scripts/Update-ProjectArchive.ps1`,
-  lokalnie, na maszynie z zainstalowanym CODESYS) - świeży CI install nie
-  ma zarejestrowanego opisu urządzenia, a archiwum go dostarcza. Patrz
-  `README.md`.
+- **`CICD.projectarchive` służy TYLKO do "primingu" repozytorium
+  urządzeń** (build otwiera je i od razu zamyka) - kod zawsze pochodzi z
+  żywego `CICD.project`, więc zwykła zmiana kodu **nie wymaga**
+  regenerowania archiwum. Trzeba je zregenerować
+  (`./scripts/Update-ProjectArchive.ps1`, lokalnie, na maszynie z
+  zainstalowanym CODESYS Control Win V3) tylko gdy zmienia się
+  target/urządzenie projektu albo zestaw bibliotek. Patrz `README.md`.
 - Pełny opis architektury i uzasadnienie decyzji: patrz `README.md`.

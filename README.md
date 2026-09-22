@@ -62,7 +62,7 @@ reports/                            - wygenerowane raporty JUnit XML + log runti
 work/                                - katalogi robocze rozpakowanego .projectarchive (git-ignored)
 ```
 
-## CICD.projectarchive - dlaczego to nie tylko CICD.project
+## CICD.projectarchive - do czego służy (i do czego NIE)
 
 Świeża instalacja CODESYS Development System (taka jak na CI) nie ma
 zarejestrowanego **opisu urządzenia** (device description) dla targetu
@@ -70,14 +70,21 @@ projektu - otwarcie samego `CICD.project` pada wtedy przy kompilacji z
 `C188: Device not installed to the system. No code generation possible.`
 i kaskadą nierozwiązanych bibliotek placeholderowych. `.projectarchive`
 bundluje opis urządzenia razem z projektem, a `projects.open_archive()`
-instaluje go automatycznie przy otwarciu - dlatego `codesys_build.py` /
-`codesys_deploy.py` / `codesys_test.py` otwierają **archiwum**, nie plik
-`.project` bezpośrednio.
+instaluje go automatycznie przy otwarciu - ale ta instalacja trafia do
+**współdzielonego, ogólnomaszynowego repozytorium urządzeń**
+(`C:\ProgramData\CODESYS\Devices`), nie tylko do projektu z archiwum.
 
-**Ważne:** `CICD.projectarchive` trzeba wygenerować LOKALNIE, na maszynie
-z już zainstalowanym CODESYS (i zainstalowanym CODESYS Control Win V3 -
-inaczej samo urządzenie nie będzie zarejestrowane do zapisania w
-archiwum), i commitować razem z `CICD.project` po każdej jego zmianie:
+Dlatego archiwum jest używane wyłącznie do jednorazowego "primingu" na
+początku joba (`codesys_build.py` otwiera je i od razu zamyka) - **kod
+zawsze pochodzi z żywego `CICD.project`**, otwieranego normalnie przez
+`projects.open()` we wszystkich trzech etapach (build/deploy/test).
+Zmiana kodu w `CICD.project` nie wymaga regenerowania archiwum.
+
+**Kiedy trzeba zregenerować `CICD.projectarchive`:** tylko gdy zmienia
+się sam **target/urządzenie** projektu (inny model PLC, inna wersja
+urządzenia) albo zestaw bibliotek, na maszynie z już zainstalowanym
+CODESYS (i zainstalowanym CODESYS Control Win V3 - inaczej samo
+urządzenie nie będzie zarejestrowane do zapisania w archiwum):
 
 ```powershell
 ./scripts/Update-ProjectArchive.ps1
@@ -91,17 +98,19 @@ runnerze `windows-latest`, jako **jeden job** (`build-deploy-test`) z
 trzema etapami po sobie:
 
 1. **build** — cache/pobranie instalatora CODESYS Development System,
-   instalacja, otwarcie i kompilacja `CICD.projectarchive`
+   instalacja, "priming" repozytorium urządzeń z `CICD.projectarchive`
+   (otwórz i zamknij), otwarcie i kompilacja żywego `CICD.project`
    ([`codesys_build.py`](scripts/codesys_build.py)). Publikuje
    `reports/junit-build.xml` jako artefakt.
 2. **deploy** — instaluje CODESYS Control Win V3 x64 (jako usługa Windows;
    przy instalacji wyłączane jest też wymuszone User Management runtime -
    patrz niżej), po czym przez CODESYS Scripting
-   ([`codesys_deploy.py`](scripts/codesys_deploy.py)) skanuje sieć przez
-   lokalny gateway żeby znaleźć adres runtime (świeżo otwarte archiwum nie
-   ma ustawionego adresu urządzenia), loguje się, wgrywa (download) i
-   uruchamia aplikację - odpytując przez do 10s czy stan RUN faktycznie
-   się utrwalił po `start()`. Publikuje `reports/junit-deploy.xml`.
+   ([`codesys_deploy.py`](scripts/codesys_deploy.py)) otwiera
+   `CICD.project`, skanuje sieć przez lokalny gateway żeby znaleźć adres
+   runtime (świeżo otwarty projekt nie ma ustawionego adresu urządzenia),
+   loguje się, wgrywa (download) i uruchamia aplikację - odpytując przez
+   do 10s czy stan RUN faktycznie się utrwalił po `start()`. Publikuje
+   `reports/junit-deploy.xml`.
 3. **test** — ([`codesys_test.py`](scripts/codesys_test.py)) loguje się
    ponownie, niezależnie, w trybie tylko-monitorowania i sprawdza, czy PLC
    jest w stanie RUN. Na końcu zawsze zbiera log runtime i zatrzymuje

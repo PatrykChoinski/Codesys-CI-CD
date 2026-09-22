@@ -2,17 +2,18 @@
 CODESYS Scripting entry point for the DEPLOY stage.
 
 Invoked headlessly, after the runtime service is already installed and
-running on this same machine:
+running on this same machine, and after the BUILD stage has already
+"primed" the machine's device repository (see codesys_build.py's
+docstring):
     CODESYS.exe --profile="CODESYS V3.5 SP22 Patch 3" --runscript="scripts\\codesys_deploy.py" ^
-        --scriptargs:'<archive_path> <extract_dir> <report_path>' --noUI
+        --scriptargs:'<project_path> <report_path>' --noUI
 
 Responsibilities:
-  1. Open CICD.projectarchive (see codesys_build.py's docstring for why -
-     the plain .project fails on a CI runner with no device descriptions
-     registered).
+  1. Open the live CICD.project (not the archive - the device it needs
+     is already registered machine-wide by the BUILD stage's priming).
   2. Point the Device at the local runtime (see
-     codesys_common.configure_device_gateway - a fresh archive-opened
-     project has no gateway/address set at all).
+     codesys_common.configure_device_gateway - a freshly opened project
+     has no gateway/address set at all).
   3. Log in to the runtime, forcing a full download, and start the
      application.
   4. Log out (the application keeps running on the device independently
@@ -40,12 +41,12 @@ from codesys_common import write_junit, configure_device_gateway
 
 
 def main():
-    archive_path, extract_dir, report_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    project_path, report_path = sys.argv[1], sys.argv[2]
 
     cases = []
     t0 = time.time()
     try:
-        project = projects.open_archive(archive_path, extract_dir, True, "")
+        project = projects.open(project_path)
         configure_device_gateway(project)
 
         app = project.active_application

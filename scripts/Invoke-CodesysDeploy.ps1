@@ -19,15 +19,13 @@ param(
     # shortcut arguments show the authoritative string) - for 3.5.22.30
     # that's "...Patch 3", NOT just "CODESYS V3.5 SP22".
     [string]$Profile = "CODESYS V3.5 SP22 Patch 3",
-    [string]$ArchivePath = (Join-Path $PSScriptRoot "..\CICD.projectarchive"),
-    [string]$ExtractDir = (Join-Path $PSScriptRoot "..\work\deploy"),
+    [string]$ProjectPath = (Join-Path $PSScriptRoot "..\CICD.project"),
     [Parameter(Mandatory = $true)][string]$RteInstallerPath,
     [string]$ReportPath = (Join-Path $PSScriptRoot "..\reports\junit-deploy.xml")
 )
 
 $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path (Split-Path $ReportPath) | Out-Null
-New-Item -ItemType Directory -Force -Path $ExtractDir | Out-Null
 
 & (Join-Path $PSScriptRoot "Install-CodesysRuntime.ps1") -InstallerPath $RteInstallerPath
 
@@ -35,7 +33,7 @@ Write-Host "== Running CODESYS Scripting (login, download, start) =="
 $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $CodesysExe `
     -Profile $Profile `
     -ScriptPath (Join-Path $PSScriptRoot "codesys_deploy.py") `
-    -ScriptArguments @($ArchivePath, $ExtractDir, $ReportPath)
+    -ScriptArguments @($ProjectPath, $ReportPath)
 
 if (Test-Path $ReportPath) {
     Write-Host "== Deploy report =="

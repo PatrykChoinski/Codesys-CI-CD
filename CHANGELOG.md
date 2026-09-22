@@ -4,6 +4,18 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- `CICD.projectarchive` używane teraz TYLKO do "primingu" repozytorium
+  urządzeń (`codesys_build.py` otwiera je i od razu zamyka na początku
+  joba) - kod aplikacji zawsze pochodzi z żywego `CICD.project`, otwieranego
+  normalnie przez `projects.open()` we wszystkich trzech etapach. Wcześniej
+  wszystkie trzy etapy otwierały samo archiwum, co wymagało jego
+  regeneracji po KAŻDEJ zmianie kodu - teraz archiwum trzeba regenerować
+  tylko przy zmianie targetu/urządzenia albo bibliotek. Zadziałało dzięki
+  temu, że instalacja opisu urządzenia z archiwum trafia do
+  współdzielonego, ogólnomaszynowego repozytorium (`C:\ProgramData\CODESYS\Devices`),
+  nie tylko do projektu otwartego z tego konkretnego archiwum.
+
 ### Added
 - `scripts/Write-Summary.ps1` + krok `Write consolidated report` (ostatni
   w workflow, `if: always()`) - zbiera wszystkie istniejące

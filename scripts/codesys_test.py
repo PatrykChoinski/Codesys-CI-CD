@@ -2,23 +2,20 @@
 CODESYS Scripting entry point for the TEST stage (smoke test).
 
 Invoked headlessly, after the DEPLOY stage has downloaded and started the
-application:
+application, and after the BUILD stage has already "primed" the
+machine's device repository (see codesys_build.py's docstring):
     CODESYS.exe --profile="CODESYS V3.5 SP22 Patch 3" --runscript="scripts\\codesys_test.py" ^
-        --scriptargs:'<archive_path> <extract_dir> <report_path>' --noUI
+        --scriptargs:'<project_path> <report_path>' --noUI
 
 Responsibilities:
-  1. Open CICD.projectarchive (see codesys_build.py's docstring for why -
-     the plain .project fails on a CI runner with no device descriptions
-     registered), pointing the Device at the local runtime same as
-     codesys_deploy.py (this stage opens its own separate extract_dir, so
-     the gateway/address isn't already set from the DEPLOY stage's run).
-  2. Log in (with always_update=True, same as DEPLOY - using False here
-     reliably left the application in STOP state even though the code
-     was reported "up to date": this stage's own open_archive/generate_code
-     run into a different extract_dir than DEPLOY's, so the resulting
-     boot application is very likely never byte-identical even from the
-     same source, and CODESYS seems to treat that as license to stop the
-     app when told not to update it).
+  1. Open the live CICD.project, pointing the Device at the local
+     runtime same as codesys_deploy.py (a freshly opened project has no
+     gateway/address set at all).
+  2. Log in with always_update=True (same as DEPLOY - using False here
+     reliably left the application in STOP state; keeping this even
+     though both stages now open the identical live .project rather than
+     two separately-compiled archive copies, since it's a harmless,
+     already-proven-safe default).
   3. Start the application if it isn't already running, then verify it
      reports RUN state.
   4. Log out and write a JUnit-style XML report consumed by the CI job.
@@ -40,12 +37,12 @@ from codesys_common import write_junit, configure_device_gateway
 
 
 def main():
-    archive_path, extract_dir, report_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    project_path, report_path = sys.argv[1], sys.argv[2]
 
     cases = []
     t0 = time.time()
     try:
-        project = projects.open_archive(archive_path, extract_dir, True, "")
+        project = projects.open(project_path)
         configure_device_gateway(project)
 
         app = project.active_application
