@@ -18,8 +18,10 @@ Responsibilities:
   4. Log out (the application keeps running on the device independently
      of the engineering session) and write a JUnit-style XML report.
 
-Deliberately does not verify RUN state here - that's the TEST stage's
-job, kept separate so "deploy failed" and "smoke test failed" are
+Polls briefly for RUN state right after start() to catch a start that
+didn't stick (see below) - the TEST stage still does the real,
+independent verification (a fresh login/state check in its own process),
+kept separate so "deploy failed" and "smoke test failed" stay
 distinguishable in CI.
 
 API confirmed against official CODESYS Forge examples
@@ -51,7 +53,21 @@ def main():
         onlineapp.login(OnlineChangeOption.Try, True)
         if not onlineapp.application_state == ApplicationState.run:
             onlineapp.start()
+
+        # start() isn't guaranteed to have taken effect the instant it
+        # returns - poll briefly rather than trusting it blindly, so a
+        # start that silently doesn't stick is caught here as a deploy
+        # failure instead of surfacing confusingly in the TEST stage.
+        deadline = time.time() + 10
+        state = onlineapp.application_state
+        while state != ApplicationState.run and time.time() < deadline:
+            time.sleep(1)
+            state = onlineapp.application_state
+
         onlineapp.logout()
+
+        if state != ApplicationState.run:
+            raise RuntimeError("Application did not reach RUN state after start() (state=%s)" % state)
 
         cases.append({
             "name": "login_download_start",

@@ -4,6 +4,17 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- Pierwszy pełny przebieg CI, w którym deploy (login/download/start)
+  faktycznie przeszedł (fix gateway + user management + kod 3010 zadziałały
+  razem) - ale test padł: `Application state was stop, expected run`.
+  Kod się zgadzał ("The application is up to date"), więc to nie problem
+  z nie-deterministycznym rekompilowaniem w osobnym `extract_dir` - `start()`
+  w deployu prawdopodobnie nie zdążyło/nie utrwaliło się zanim skrypt się
+  wylogował. `codesys_deploy.py` teraz odpytuje stan przez do 10s po
+  `start()` i traktuje brak stanu RUN jako błąd deployu (zamiast mylącego
+  błędu dopiero w oddzielnym etapie test).
+
 ### Reverted
 - Cache całego katalogu instalacji Dev System (dodany wcześniej) wycofany
   - `CODESYS.exe` wisiał w nieskończoność (52+ min zanim ręcznie anulowano
