@@ -4,6 +4,11 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- Naprawiono błąd składni ST w `CICD.project` (`C189`/`C9`/`C190` -
+  nieoczekiwany token `!` zamiast `;`), który celowo wprowadzono wcześniej
+  do testu ścieżki błędu w CI. Kompilacja powinna teraz przechodzić.
+
 ### Changed
 - `CICD.projectarchive` używane teraz TYLKO do "primingu" repozytorium
   urządzeń (`codesys_build.py` otwiera je i od razu zamyka na początku
