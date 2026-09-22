@@ -56,7 +56,7 @@ scripts/
   Invoke-CodesysBuild.ps1            - wrapper PowerShell dla etapu build
   Invoke-CodesysDeploy.ps1           - wrapper PowerShell dla etapu deploy (install RTE + login/download/start)
   Invoke-CodesysTest.ps1             - wrapper PowerShell dla etapu test (+ zbiera log, stopuje usługę)
-.github/workflows/codesys-ci.yml    - workflow GitHub Actions (joby: build, deploy-test)
+.github/workflows/codesys-ci.yml    - workflow GitHub Actions (1 job: build-deploy-test)
 reports/                            - wygenerowane raporty JUnit XML + log runtime (git-ignored)
 work/                                - katalogi robocze rozpakowanego .projectarchive (git-ignored)
 ```
@@ -82,37 +82,41 @@ archiwum), i commitować razem z `CICD.project` po każdej jego zmianie:
 ./scripts/Update-ProjectArchive.ps1
 ```
 
-## Etapy pipeline'u (joby CI)
+## Etapy pipeline'u (jeden job CI)
 
 Workflow [`codesys-ci.yml`](.github/workflows/codesys-ci.yml) uruchamia
-się na push/PR do `master` oraz ręcznie (`workflow_dispatch`), na hostowanych
-runnerach `windows-latest`, jako dwa joby:
+się na push/PR do `master` oraz ręcznie (`workflow_dispatch`), na hostowanym
+runnerze `windows-latest`, jako **jeden job** (`build-deploy-test`) z
+trzema etapami po sobie:
 
 1. **build** — cache/pobranie instalatora CODESYS Development System,
    instalacja, otwarcie i kompilacja `CICD.projectarchive`
-   ([`codesys_build.py`](scripts/codesys_build.py)). Runtime nie jest tu
-   potrzebny wcale - opis urządzenia przychodzi z archiwum. Publikuje
-   `reports/junit-build.xml` jako artefakt. Błąd kompilacji przerywa
-   pipeline od razu.
-2. **deploy-test** — instaluje CODESYS Development System oraz CODESYS
-   Control Win V3 x64 (jako usługa Windows; przy instalacji wyłączane jest
-   też wymuszone User Management runtime - patrz niżej), po czym przez
-   CODESYS Scripting ([`codesys_deploy.py`](scripts/codesys_deploy.py))
-   skanuje sieć przez lokalny gateway żeby znaleźć adres runtime (świeżo
-   otwarte archiwum nie ma ustawionego adresu urządzenia), loguje się,
-   wgrywa (download) i uruchamia aplikację. Następnie
-   ([`codesys_test.py`](scripts/codesys_test.py)) loguje się ponownie w
-   trybie tylko-monitorowania i sprawdza, czy PLC jest w stanie RUN. Na
-   końcu zawsze zbiera log runtime i zatrzymuje usługę (choć i tak cała VM
-   zostanie usunięta po jobie). Publikuje `reports/junit-deploy.xml` i
-   `reports/junit-test.xml` jako artefakty oraz `junit-test.xml` jako
-   czytelne podsumowanie testów w GitHub Actions.
+   ([`codesys_build.py`](scripts/codesys_build.py)). Publikuje
+   `reports/junit-build.xml` jako artefakt.
+2. **deploy** — instaluje CODESYS Control Win V3 x64 (jako usługa Windows;
+   przy instalacji wyłączane jest też wymuszone User Management runtime -
+   patrz niżej), po czym przez CODESYS Scripting
+   ([`codesys_deploy.py`](scripts/codesys_deploy.py)) skanuje sieć przez
+   lokalny gateway żeby znaleźć adres runtime (świeżo otwarte archiwum nie
+   ma ustawionego adresu urządzenia), loguje się, wgrywa (download) i
+   uruchamia aplikację - odpytując przez do 10s czy stan RUN faktycznie
+   się utrwalił po `start()`. Publikuje `reports/junit-deploy.xml`.
+3. **test** — ([`codesys_test.py`](scripts/codesys_test.py)) loguje się
+   ponownie, niezależnie, w trybie tylko-monitorowania i sprawdza, czy PLC
+   jest w stanie RUN. Na końcu zawsze zbiera log runtime i zatrzymuje
+   usługę (choć i tak cała VM zostanie usunięta po jobie). Publikuje
+   `reports/junit-test.xml` jako artefakt oraz jako czytelne podsumowanie
+   testów w GitHub Actions.
 
-Deploy i test są rozdzielone na osobne kroki z osobnymi raportami JUnit
-(nie osobne joby - bo etap testu potrzebuje tej samej, już uruchomionej
-usługi runtime co etap deployu, a każdy job GitHub Actions to inna VM),
-więc i tak od razu widać, czy problem jest przy wgrywaniu, czy dopiero przy
-weryfikacji działania.
+Błąd kompilacji (etap 1) zatrzymuje job od razu - domyślne zachowanie
+GitHub Actions: nieudany krok przerywa pozostałe kroki w tym samym jobie
+- więc etapy deploy/test w ogóle się nie odpalą, mimo że wszystko jest w
+jednym jobie. Trzy etapy to jeden job (nie osobne joby jak wcześniej),
+bo Dev System nie da się bezpiecznie cache'ować między jobami (patrz
+komentarz w workflow) - rozdzielenie na 2 joby oznaczało instalowanie go
+dwa razy (~26 min zamiast ~13 min). Każdy etap ma osobny raport JUnit,
+więc mimo wspólnego joba i tak od razu widać, czy problem jest przy
+kompilacji, wgrywaniu, czy dopiero przy weryfikacji działania.
 
 ## Wymuszone User Management na runtime
 

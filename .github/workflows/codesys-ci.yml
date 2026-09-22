@@ -17,18 +17,21 @@ env:
   CODESYS_RTE_ASSET: "CODESYS.Control.RTE.SL.3.5.22.30.zip"
 
 jobs:
-  build:
+  build-deploy-test:
     # Hosted, ephemeral runner - a fresh VM per job, so no Docker/self-hosted
     # machine needed for isolation. Installers are pulled from this repo's
     # private "Installers" GitHub Release (see installers/README.md) using
     # the built-in GITHUB_TOKEN - no external hosting/secrets involved.
     #
-    # Compiles CICD.projectarchive (not CICD.project directly - see
-    # scripts/codesys_build.py for why) using only the Development System.
-    # No runtime install needed here: the archive itself carries the
-    # device description, so this job stays fast and independent.
+    # Single job (not build + deploy-test as two separate jobs): the Dev
+    # System install (~14 min) doesn't survive being cached (see the
+    # comment below), so splitting into two jobs meant paying that cost
+    # twice per run. One job installs it once; a failing "Compile
+    # project" step still stops everything after it by default (same
+    # fail-fast behaviour a separate build job gave), it just no longer
+    # costs a second install to get there.
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +42,7 @@ jobs:
       # Dev System was restored from a files-only cache instead of run
       # through its real installer. Whatever registry/profile state the
       # installer sets up, a file copy doesn't reproduce it, so the
-      # ~14 min install itself still has to run in every job for now.
+      # ~14 min install itself still has to run every time for now.
       - name: Cache CODESYS Development System installer archive
         id: cache-devsys
         uses: actions/cache@v4
@@ -79,42 +82,6 @@ jobs:
           name: codesys-build-report
           path: reports/junit-build.xml
           if-no-files-found: warn
-
-  deploy-test:
-    needs: build
-    runs-on: windows-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Cache CODESYS Development System installer archive
-        id: cache-devsys
-        uses: actions/cache@v4
-        with:
-          path: installers\${{ env.CODESYS_DEVSYS_ASSET }}
-          key: codesys-devsys-installer-${{ env.CODESYS_VERSION }}
-
-      - name: Download CODESYS Development System installer archive
-        if: steps.cache-devsys.outputs.cache-hit != 'true'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          New-Item -ItemType Directory -Force -Path installers | Out-Null
-          gh release download "$env:CODESYS_RELEASE_TAG" --repo "${{ github.repository }}" `
-            --pattern "$env:CODESYS_DEVSYS_ASSET" --dir installers --clobber
-
-      - name: Extract CODESYS Development System installer
-        id: extract-devsys
-        shell: pwsh
-        run: |
-          $exePath = ./scripts/Expand-Installer.ps1 -ZipPath "installers\$env:CODESYS_DEVSYS_ASSET" -DestinationDir installers\devsys
-          "exe_path=$exePath" >> $env:GITHUB_OUTPUT
-
-      - name: Install CODESYS Development System
-        shell: pwsh
-        run: ./scripts/Install-CodesysDevSystem.ps1 -InstallerPath "${{ steps.extract-devsys.outputs.exe_path }}"
 
       - name: Cache CODESYS Control Win V3 installer archive
         id: cache-rte

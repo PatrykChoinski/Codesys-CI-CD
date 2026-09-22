@@ -4,6 +4,16 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Changed
+- Pipeline CI z powrotem jako **1 job** (`build-deploy-test`) zamiast
+  2 (`build` → `deploy-test`) - skoro cache instalacji Dev System między
+  jobami nie działa (patrz wpis wyżej), rozdzielenie na 2 joby oznaczało
+  instalowanie go dwa razy (~26 min zamiast ~13 min). Kroki w jednym jobie
+  są sekwencyjne, więc błąd kompilacji nadal zatrzymuje deploy/test
+  automatycznie (domyślne zachowanie GitHub Actions), bez utraty
+  "fail-fast" które dawał podział na joby - tylko już bez podwójnej
+  instalacji.
+
 ### Fixed
 - Pierwszy pełny przebieg CI, w którym deploy (login/download/start)
   faktycznie przeszedł (fix gateway + user management + kod 3010 zadziałały

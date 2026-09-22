@@ -20,11 +20,14 @@ Zasady pracy Claude w tym repozytorium.
   prywatnego GitHub Release (tag `Installers`, w tym repo) przez
   `gh release download` i cache'owane przez `actions/cache`, patrz
   `installers/README.md`.
-- Pipeline CI (`.github/workflows/codesys-ci.yml`) ma 2 joby: `build`
-  (tylko kompilacja `CICD.projectarchive`, bez runtime) → `deploy-test`
-  (install RTE + login/download/start + smoke test stanu RUN w jednym
-  jobie, bo oba kroki potrzebują tej samej żywej usługi runtime na tej
-  samej VM). Szczegóły w `README.md`.
+- Pipeline CI (`.github/workflows/codesys-ci.yml`) to **1 job**
+  (`build-deploy-test`) z 3 etapami po sobie: kompilacja
+  `CICD.projectarchive` → install RTE + login/download/start →
+  smoke test stanu RUN. Był kiedyś podzielony na 2 joby, ale Dev System
+  nie da się bezpiecznie cache'ować między jobami (próba się nie
+  powiodła - patrz CHANGELOG), więc 2 joby oznaczały instalowanie go
+  dwa razy (~26 zamiast ~13 min) - stąd z powrotem 1 job. Szczegóły w
+  `README.md`.
 - **`CICD.projectarchive` musi być zregenerowany i commitowany razem z
   `CICD.project` po każdej jego zmianie** (`./scripts/Update-ProjectArchive.ps1`,
   lokalnie, na maszynie z zainstalowanym CODESYS) - świeży CI install nie
