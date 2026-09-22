@@ -4,6 +4,23 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Added
+- `scripts/Write-Summary.ps1` + krok `Write consolidated report` (ostatni
+  w workflow, `if: always()`) - zbiera wszystkie istniejące
+  `reports/junit-*.xml` w jeden raport Markdown wypisywany do GitHub Job
+  Summary (widoczny na górze strony przebiegu, bez przeszukiwania logów).
+  Dla nieudanego etapu pokazuje pełną treść błędu (np. listę błędów
+  kompilacji w blokach kodu), dla nieodpalonych etapów - "nie
+  uruchomiono".
+
+### Fixed
+- `write_junit()` w `codesys_common.py` trzymał treść błędu w atrybucie
+  XML `message="..."` - normalizacja białych znaków w atrybutach XML
+  zlepia wieloliniowe błędy kompilacji w jedną linię przy odczycie.
+  Przeniesiono treść do zawartości tekstowej elementu `<failure>`, co
+  zachowuje podziały linii. Dodano też wymuszone kodowanie UTF-8 przy
+  zapisie pliku raportu.
+
 ### Fixed
 - Pierwszy przebieg pojedynczego joba: build i deploy przeszły (deploy
   poprawnie potwierdził stan RUN po `start()`), ale `test` znowu znalazł

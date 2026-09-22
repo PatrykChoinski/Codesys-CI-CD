@@ -141,3 +141,13 @@ jobs:
           path: reports/junit-test.xml
           reporter: java-junit
           fail-on-error: true
+
+      # Consolidated Markdown report (build+deploy+test in one place,
+      # with full compile/login/runtime error text) written to the Job
+      # Summary - visible right on the run page, no log digging needed.
+      # Safe even if earlier stages never ran (their report just won't
+      # exist yet).
+      - name: Write consolidated report
+        if: always()
+        shell: pwsh
+        run: ./scripts/Write-Summary.ps1

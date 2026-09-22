@@ -3,6 +3,8 @@ Shared helpers for the CODESYS Scripting entry points
 (codesys_build.py / codesys_deploy.py / codesys_test.py).
 """
 
+import io
+
 from scriptengine import *
 
 
@@ -17,15 +19,19 @@ def write_junit(report_path, testsuite_name, cases):
     for c in cases:
         lines.append('  <testcase name="%s" time="%.2f">' % (c["name"], c["time"]))
         if c["status"] != "pass":
-            lines.append('    <failure message="%s"></failure>' % escape(c["message"]))
+            # The failure detail goes in the element's TEXT CONTENT, not a
+            # "message" attribute - XML attribute values get whitespace
+            # normalized on parse (newlines collapse to spaces), which
+            # squashes a multi-line list of compile errors onto one line.
+            lines.append("    <failure>%s</failure>" % escape(c["message"]))
         lines.append("  </testcase>")
     lines.append("</testsuite>")
-    with open(report_path, "w") as f:
-        f.write("\n".join(lines))
+    with io.open(report_path, "w", encoding="utf-8") as f:
+        f.write(u"\n".join(lines))
 
 
 def escape(text):
-    return (text or "").replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;")
+    return (text or u"").replace(u"&", u"&amp;").replace(u"<", u"&lt;")
 
 
 def _get_or_create_local_gateway(new_gateway_name="Gateway-1"):

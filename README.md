@@ -56,6 +56,7 @@ scripts/
   Invoke-CodesysBuild.ps1            - wrapper PowerShell dla etapu build
   Invoke-CodesysDeploy.ps1           - wrapper PowerShell dla etapu deploy (install RTE + login/download/start)
   Invoke-CodesysTest.ps1             - wrapper PowerShell dla etapu test (+ zbiera log, stopuje usługę)
+  Write-Summary.ps1                 - zbiera junit-*.xml w jeden raport Markdown (GitHub Job Summary)
 .github/workflows/codesys-ci.yml    - workflow GitHub Actions (1 job: build-deploy-test)
 reports/                            - wygenerowane raporty JUnit XML + log runtime (git-ignored)
 work/                                - katalogi robocze rozpakowanego .projectarchive (git-ignored)
@@ -117,6 +118,19 @@ komentarz w workflow) - rozdzielenie na 2 joby oznaczało instalowanie go
 dwa razy (~26 min zamiast ~13 min). Każdy etap ma osobny raport JUnit,
 więc mimo wspólnego joba i tak od razu widać, czy problem jest przy
 kompilacji, wgrywaniu, czy dopiero przy weryfikacji działania.
+
+## Raport z przebiegu (Job Summary)
+
+Ostatni krok workflow (`Write consolidated report`,
+[`Write-Summary.ps1`](scripts/Write-Summary.ps1), zawsze uruchamiany,
+nawet po niepowodzeniu wcześniejszego etapu) czyta wszystkie istniejące
+`reports/junit-*.xml` i składa je w jeden raport Markdown, wypisywany do
+[GitHub Job Summary](https://github.blog/2022-05-09-supercharging-github-actions-with-job-summaries/)
+- widoczny od razu na górze strony przebiegu w zakładce Actions, bez
+przeszukiwania logów. Dla etapu który padł widać pełną treść błędu (np.
+listę błędów kompilacji, jeden pod drugim), dla etapów które się nie
+odpaliły (bo wcześniejszy etap przerwał pipeline) - wyraźne oznaczenie
+"nie uruchomiono".
 
 ## Wymuszone User Management na runtime
 
