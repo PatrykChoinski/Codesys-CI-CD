@@ -23,6 +23,15 @@ env:
   # over GitHub's 100 MB per-file limit). See README.md.
   PROJECT_ARCHIVE_RELEASE_TAG: "ProjectArchive"
   PROJECT_ARCHIVE_ASSET: "PilaJednosuportowa.projectarchive"
+  # The project targets a hardware PLC (AX8) this runner doesn't have, so
+  # Compile/Deploy/Test swap its Device - in memory only, the committed
+  # .project keeps AX8 - for the locally installed CODESYS Control Win V3
+  # x64 ("type|id|version", see retarget_device() in
+  # scripts/codesys_common.py). In SP22/SoftMotion 4.x this plain device
+  # is also the SoftMotion one (no separate "SoftMotion" variant exists).
+  # Version must match CODESYS_VERSION. Set to "" to build for the
+  # project's own device.
+  CODESYS_TARGET_DEVICE: "4096|0000 0004|3.5.22.30"
 
 jobs:
   build-deploy-test:

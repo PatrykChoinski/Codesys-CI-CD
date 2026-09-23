@@ -33,7 +33,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scriptengine import *
-from codesys_common import write_junit, configure_device_gateway
+from codesys_common import write_junit, configure_device_gateway, retarget_device
 
 
 def main():
@@ -44,6 +44,7 @@ def main():
     t0 = time.time()
     try:
         project = projects.open(project_path, encryption_password=encryption_password)
+        retarget_device(project)
         configure_device_gateway(project)
 
         app = project.active_application

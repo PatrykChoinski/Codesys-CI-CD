@@ -4,8 +4,14 @@ Shared helpers for the CODESYS Scripting entry points
 """
 
 import io
+import os
 
 from scriptengine import *
+
+# "type|id|version" of the device the project is retargeted to before
+# compiling/deploying - see retarget_device(). Empty/unset = keep the
+# project's own device.
+TARGET_DEVICE_ENV = "CODESYS_TARGET_DEVICE"
 
 
 def write_junit(report_path, testsuite_name, cases):
@@ -32,6 +38,43 @@ def write_junit(report_path, testsuite_name, cases):
 
 def escape(text):
     return (text or u"").replace(u"&", u"&amp;").replace(u"<", u"&lt;")
+
+
+def retarget_device(project):
+    """
+    Swaps the project's Device for the one named in the
+    CODESYS_TARGET_DEVICE env var ("type|id|version"), in memory only -
+    the .project file in git keeps its real target.
+
+    Needed because the real project targets a hardware PLC (AX8) the CI
+    runner doesn't have: CI installs CODESYS Control Win V3 x64 locally,
+    so the project must be compiled/downloaded for that device instead.
+    In V3.5 SP22 / SoftMotion 4.x there is no separate "Win V3 x64
+    SoftMotion" device any more - SoftMotion runs on the plain
+    "CODESYS Control Win V3 x64" (4096 / "0000 0004").
+
+    Same as "Update Device" in the IDE: ScriptDeviceObject.update(type,
+    id, version, module_id) - signature confirmed by reflecting
+    ScriptDriverDeviceObject.plugin.dll of CODESYS 3.5.22.30. Idempotent:
+    skipped when the device already matches (e.g. the BUILD stage saved
+    the retargeted project and DEPLOY/TEST reopen it).
+    """
+    spec = os.environ.get(TARGET_DEVICE_ENV, "").strip()
+    if not spec:
+        print("%s not set - keeping the project's own device." % TARGET_DEVICE_ENV)
+        return
+    dev_type, dev_id, dev_version = [p.strip() for p in spec.split("|")]
+    dev_type = int(dev_type)
+
+    device = project.find("Device", True)[0]
+    current = device.get_device_identification()
+    current_str = "%s|%s|%s" % (current.type, current.id, current.version)
+    if (current.type, current.id, current.version) == (dev_type, dev_id, dev_version):
+        print("Device already %s - no retarget needed." % current_str)
+        return
+
+    print("Retargeting Device %s -> %s" % (current_str, spec))
+    device.update(dev_type, dev_id, dev_version, None)
 
 
 def _get_or_create_local_gateway(new_gateway_name="Gateway-1"):

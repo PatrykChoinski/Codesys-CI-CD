@@ -45,4 +45,9 @@ Zasady pracy Claude w tym repozytorium.
   sekretu repo `PROJECT_PASSWORD` (zmienna env `CODESYS_PROJECT_PASSWORD`
   we wszystkich trzech krokach - Compile/Deploy/Test). Nigdy nie
   zapisywać hasła w repo/logach. Patrz `README.md`.
+- Projekt ma urządzenie AX8 (sprzętowy PLC) - CI podmienia je w pamięci
+  na `CODESYS Control Win V3 x64` (`CODESYS_TARGET_DEVICE` w workflow,
+  `retarget_device()` w `scripts/codesys_common.py`). Plik projektu w repo
+  zostaje z AX8. Przy zmianie wersji CODESYS zaktualizuj też wersję w
+  `CODESYS_TARGET_DEVICE`.
 - Pełny opis architektury i uzasadnienie decyzji: patrz `README.md`.

@@ -5,6 +5,15 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 ## [Unreleased]
 
 ### Changed
+- CI podmienia w projekcie urządzenie AX8 (którego nie ma na runnerze) na
+  `CODESYS Control Win V3 x64` 3.5.22.30 (`4096|0000 0004`) przed
+  kompilacją, deployem i testem - nowa funkcja `retarget_device()` w
+  `scripts/codesys_common.py` (odpowiednik "Update Device" w IDE,
+  `ScriptDeviceObject.update(...)`), sterowana zmienną
+  `CODESYS_TARGET_DEVICE` w workflow (pusta = bez podmiany). Zmiana
+  tylko w pamięci/na runnerze - `PilaJednosuportowa.project` w repo
+  nadal ma AX8. W SP22/SoftMotion 4.x nie ma osobnego urządzenia
+  "Win V3 x64 SoftMotion" - SoftMotion działa na zwykłym Win V3 x64.
 - Zastąpiono testowy projekt `CICD.project`/`CICD.projectarchive`
   prawdziwym projektem `PilaJednosuportowa.project`/
   `PilaJednosuportowa.projectarchive` - zaktualizowano wszystkie

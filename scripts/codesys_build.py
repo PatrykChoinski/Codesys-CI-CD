@@ -55,7 +55,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scriptengine import *
-from codesys_common import write_junit
+from codesys_common import write_junit, retarget_device
 
 CompileCategory = Guid("{97F48D64-A2A3-4856-B640-75C046E37EA9}")
 _SEVERITY_NAMES = {
@@ -81,6 +81,7 @@ def main():
         primer.close()
 
         project = projects.open(project_path, encryption_password=archive_password)
+        retarget_device(project)
         system.clear_messages(CompileCategory)
         project.active_application.generate_code()
 
