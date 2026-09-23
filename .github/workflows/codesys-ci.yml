@@ -32,6 +32,11 @@ env:
   # Version must match CODESYS_VERSION. Set to "" to build for the
   # project's own device.
   CODESYS_TARGET_DEVICE: "4096|0000 0004|3.5.22.30"
+  # Library placeholders (comma-separated) that keep the version they
+  # had on AX8 after the device swap - Win V3 x64 would resolve
+  # IecVarAccess to 4.6.0.0, which clashes with the project's
+  # SymbolicVarsBase. See _pin_placeholders() in scripts/codesys_common.py.
+  CODESYS_KEEP_PLACEHOLDERS: "IecVarAccess"
 
 jobs:
   build-deploy-test:

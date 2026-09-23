@@ -12,6 +12,10 @@ from scriptengine import *
 # compiling/deploying - see retarget_device(). Empty/unset = keep the
 # project's own device.
 TARGET_DEVICE_ENV = "CODESYS_TARGET_DEVICE"
+# Comma-separated placeholder names that keep the library version they
+# resolved to on the original device after retargeting - see
+# _pin_placeholders().
+KEEP_PLACEHOLDERS_ENV = "CODESYS_KEEP_PLACEHOLDERS"
 
 
 def write_junit(report_path, testsuite_name, cases):
@@ -74,7 +78,139 @@ def retarget_device(project):
         return
 
     print("Retargeting Device %s -> %s" % (current_str, spec))
-    device.update(dev_type, dev_id, dev_version, None)
+    # The project comes from DIADesigner-AX 1.10, so changing its device
+    # asks "Do you want to upgrade the storage format to 'CODESYS V3.5
+    # SP22 Patch 3'?" (message key LossOfDataWarning2, default "Yes").
+    # Headless CI can't answer that via --textPrompts (no stdin ->
+    # "The handle is invalid"), so let CODESYS auto-answer simple prompts
+    # with their default and just log them. Only affects the in-memory
+    # project - the file on disk isn't touched unless saved. Verified
+    # locally against CODESYS 3.5.22.30.
+    placeholders_before = _snapshot_placeholders(project)
+    previous_handling = system.prompt_handling
+    system.prompt_handling = PromptHandling.LogMessageKeys | PromptHandling.LogSimplePrompts
+    try:
+        device.update(dev_type, dev_id, dev_version, None)
+    finally:
+        system.prompt_handling = previous_handling
+    new = device.get_device_identification()
+    print("Device is now %s|%s|%s" % (new.type, new.id, new.version))
+    _restore_placeholders(project, placeholders_before)
+    _pin_placeholders(project, placeholders_before)
+
+
+def _libmans(project):
+    return [o for o in project.get_children(True) if o.is_libman]
+
+
+def _effective(ref):
+    try:
+        return ref.effective_resolution
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _snapshot_placeholders(project):
+    """
+    {libman guid: {placeholder name: (default resolution, effective
+    resolution)}} before retarget - i.e. the library versions the project
+    was built with on AX8 in DIADesigner-AX.
+    """
+    snap = {}
+    for libman in _libmans(project):
+        snap[libman.guid] = dict(
+            (ref.placeholder_name, (ref.default_resolution, _effective(ref)))
+            for ref in libman.references if ref.is_placeholder
+        )
+    return snap
+
+
+def _restore_placeholders(project, snapshot):
+    """
+    Library references the AX8 device added implicitly (SM3_Basic,
+    SM3_CNC, SM3_Drive_ETC, ... - SoftMotion) are dropped by
+    device.update(), because the plain Win V3 x64 device doesn't add
+    them - the application then fails with "C77: Unknown type 'SMC_...'".
+    Re-add every placeholder that disappeared, as a normal library
+    reference, with its original default resolution; the redirect step
+    below then points it at an installed version. Verified locally.
+    """
+    for libman in _libmans(project):
+        before = snapshot.get(libman.guid, {})
+        now = set(ref.placeholder_name for ref in libman.references if ref.is_placeholder)
+        for name, (default, _) in sorted(before.items()):
+            if name in now:
+                continue
+            libman.add_placeholder(name, default)
+            print("Placeholder %s: re-added after retarget (default %s)" % (name, default))
+
+
+def _parse_library_title(lib):
+    # str(managed library) is "Title, 1.2.3.4 (Company)"
+    text = "%s" % lib
+    title, rest = text.split(", ", 1)
+    version = rest.split(" (", 1)[0]
+    return title, tuple(int(p) for p in version.split(".") if p.isdigit()), text
+
+
+def _pin_placeholders(project, snapshot):
+    """
+    Library placeholders (#SM3_Basic, #IecVarAccess, ...) are resolved by
+    the DEVICE description, so swapping AX8 for Win V3 x64 silently swaps
+    library versions too - e.g. IecVarAccess 3.5.15.20 -> 4.6.0.0, which
+    then doesn't match the project's SymbolicVarsBase (C4 "'IsReference'
+    is no component of 'SymbolicVarNodeAccessor'"), and SoftMotion
+    placeholders the new device doesn't define at all stay unresolved
+    ("C77: Unknown type 'SMC_...'").
+
+    Fix, same as "Placeholder redirection" in the IDE's Library Manager:
+      1. placeholders listed in CODESYS_KEEP_PLACEHOLDERS go back to the
+         version they resolved to before retarget, if installed (the
+         project archive installs them in CI) - e.g. IecVarAccess;
+      2. placeholders that are unresolved now go to the newest installed
+         library whose title equals the placeholder name (e.g. SM3_Basic
+         -> "SM3_Basic, 4.20.0.0 (CODESYS)");
+      3. everything else keeps what the new device resolves it to.
+    Pinning ALL placeholders back to their AX8 versions was tried and is
+    worse (50 vs 14 errors): system/IO libraries (IoStandard,
+    CmpIecTask, IoDrv*) and Delta's DL_* libraries must match the new
+    device, so pinning is opt-in per placeholder.
+    API (ScriptPlaceholderReference.effective_resolution / set_redirection())
+    confirmed by reflecting ScriptDriverLibManObject.plugin.dll of
+    CODESYS 3.5.22.30; verified locally.
+    """
+    keep = set(p.strip() for p in os.environ.get(KEEP_PLACEHOLDERS_ENV, "").split(",") if p.strip())
+    installed = set()
+    newest = {}
+    for repo in librarymanager.repositories:
+        for lib in librarymanager.get_all_libraries(repo):
+            try:
+                title, version, text = _parse_library_title(lib)
+            except ValueError:
+                continue
+            installed.add(text)
+            if title not in newest or version > newest[title][0]:
+                newest[title] = (version, text)
+
+    for libman in _libmans(project):
+        before = snapshot.get(libman.guid, {})
+        for ref in libman.references:
+            if not ref.is_placeholder:
+                continue
+            name = ref.placeholder_name
+            current = _effective(ref)
+            original = before.get(name, (None, None))[1]
+            if name in keep and original and original in installed:
+                target = original
+            elif not current and name in newest:
+                target = newest[name][1]
+            else:
+                if not current:
+                    print("Placeholder %s: unresolved, no installed library named '%s'" % (name, name))
+                continue
+            if target != current:
+                ref.set_redirection(target)
+                print("Placeholder %s: %s -> %s" % (name, current, target))
 
 
 def _get_or_create_local_gateway(new_gateway_name="Gateway-1"):

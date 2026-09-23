@@ -4,6 +4,26 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Fixed
+- Podmiana urządzenia w CI padała z `The object 'Device' could not be
+  saved. (Reason: The handle is invalid.)` - projekt jest z
+  DIADesigner-AX 1.10, więc zmiana urządzenia pyta o podniesienie formatu
+  zapisu do SP22 (prompt `LossOfDataWarning2`), a headless CI nie ma
+  stdin. `retarget_device()` na czas `update()` włącza
+  `PromptHandling.LogSimplePrompts` (domyślne "Yes", tylko w pamięci).
+- Po podmianie urządzenia znikały referencje bibliotek dodawane przez
+  urządzenie AX8 (`SM3_Basic`, `SM3_CNC`, `SM3_Drive_ETC`, ...), a
+  placeholdery rozwiązywały się inaczej (501 błędów kompilacji).
+  `retarget_device()` teraz: dodaje z powrotem placeholdery, które
+  zniknęły; przekierowuje nierozwiązane na najnowszą zainstalowaną
+  bibliotekę o tej samej nazwie (SoftMotion -> 4.19/4.20); przypina do
+  wersji z AX8 placeholdery z nowej zmiennej workflow
+  `CODESYS_KEEP_PLACEHOLDERS` (domyślnie `IecVarAccess` - 4.6.0.0 z Win
+  V3 x64 kłóci się z `SymbolicVarsBase` projektu). Zweryfikowane lokalnie
+  na CODESYS 3.5.22.30: 501 -> 2 błędy. Pozostałe 2 (`Encoders`, linia 7,
+  `IoConfig_Globals_Mapping.iEncoderImpulse`) to zmienna zmapowana na
+  wbudowane I/O sterownika AX8, którego Win V3 x64 nie ma.
+
 ### Changed
 - CI podmienia w projekcie urządzenie AX8 (którego nie ma na runnerze) na
   `CODESYS Control Win V3 x64` 3.5.22.30 (`4096|0000 0004`) przed

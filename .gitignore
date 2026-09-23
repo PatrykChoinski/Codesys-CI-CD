@@ -21,3 +21,6 @@ installers/*
 # scripts/Update-ProjectArchive.ps1 and uploaded to a GitHub Release
 # asset (too large for git, see README.md), not committed.
 *.projectarchive
+
+# Local CODESYS MCP server config (machine-specific paths, see CLAUDE.md)
+.mcp.json
