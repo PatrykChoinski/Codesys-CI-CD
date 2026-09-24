@@ -55,16 +55,9 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scriptengine import *
-from codesys_common import write_junit, retarget_device
+from codesys_common import write_junit, retarget_device, format_compile_message
 
 CompileCategory = Guid("{97F48D64-A2A3-4856-B640-75C046E37EA9}")
-_SEVERITY_NAMES = {
-    Severity.FatalError: "Fatal error",
-    Severity.Error: "Error",
-    Severity.Warning: "Warning",
-    Severity.Information: "Information",
-    Severity.Text: "Text",
-}
 
 
 def main():
@@ -87,10 +80,7 @@ def main():
 
         msgs = list(system.get_message_objects(CompileCategory, Severity.FatalError | Severity.Error))
         ok = len(msgs) == 0
-        message = "\n".join(
-            "%s %s%s: %s" % (_SEVERITY_NAMES.get(m.severity, m.severity), m.prefix, m.number, m.text)
-            for m in msgs
-        )
+        message = "\n".join(format_compile_message(m) for m in msgs)
 
         cases.append({
             "name": "compile",

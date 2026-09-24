@@ -4,6 +4,17 @@ Wszystkie znaczące zmiany w tym repozytorium są odnotowywane w tym pliku.
 
 ## [Unreleased]
 
+### Added
+- Raport kompilacji podaje przy każdym błędzie obiekt (ścieżka POU w
+  drzewie projektu) i pozycję, np. `Error C4: 'iEncoderImpulse' is no
+  component of 'IoConfig_Globals_Mapping' [Device/Plc Logic/Application/
+  Settings/Encoders, Line 7, Column 1 (Impl)]` - w `junit-build.xml`, w
+  Job Summary oraz jako adnotacje `::error::` na stronie runu (widoczne
+  bez dostępu do logów). Formatowanie w `format_compile_message()`
+  (`scripts/codesys_common.py`). Błąd kompilacji tego projektu po
+  podmianie AX8 -> Win V3 x64 jest oczekiwany (zmienna z wbudowanego I/O
+  AX8) - test ma go zgłaszać.
+
 ### Fixed
 - Podmiana urządzenia w CI padała z `The object 'Device' could not be
   saved. (Reason: The handle is invalid.)` - projekt jest z

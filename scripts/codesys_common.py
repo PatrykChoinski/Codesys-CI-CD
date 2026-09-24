@@ -44,6 +44,42 @@ def escape(text):
     return (text or u"").replace(u"&", u"&amp;").replace(u"<", u"&lt;")
 
 
+_SEVERITY_NAMES = {
+    Severity.FatalError: "Fatal error",
+    Severity.Error: "Error",
+    Severity.Warning: "Warning",
+    Severity.Information: "Information",
+    Severity.Text: "Text",
+}
+
+
+def _object_path(obj):
+    # "Device/Plc Logic/Application/Settings/Encoders" - the POU/object a
+    # message points at, walked up to the project root.
+    names = []
+    while obj is not None and len(names) < 20:
+        try:
+            names.append(obj.get_name())
+            obj = obj.parent
+        except Exception:  # noqa: BLE001 - reached the project itself
+            break
+    return "/".join(reversed(names))
+
+
+def format_compile_message(m):
+    """
+    "Error C4: 'x' is no component of 'y' [Device/.../Encoders, Line 7,
+    Column 1 (Impl)]" - which POU and line, not just the error text.
+    Errors inside a library have no position, only the library object.
+    """
+    text = "%s %s%s: %s" % (_SEVERITY_NAMES.get(m.severity, m.severity), m.prefix, m.number, m.text)
+    try:
+        where = [p for p in (_object_path(m.object), m.position_text) if p]
+    except Exception:  # noqa: BLE001 - message not tied to an object
+        where = []
+    return "%s [%s]" % (text, ", ".join(where)) if where else text
+
+
 def retarget_device(project):
     """
     Swaps the project's Device for the one named in the

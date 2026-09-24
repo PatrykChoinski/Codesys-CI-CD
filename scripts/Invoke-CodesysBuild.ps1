@@ -34,6 +34,21 @@ $codesysExit = & (Join-Path $PSScriptRoot "Invoke-CodesysCli.ps1") -CodesysExe $
 if (Test-Path $ReportPath) {
     Write-Host "== Build report =="
     Get-Content $ReportPath
+    if ($env:GITHUB_ACTIONS -eq "true") {
+        # One annotation per compile error ("Error C4: ... [Device/.../
+        # Encoders, Line 7, Column 1 (Impl)]") - shown on the run page
+        # itself, no log access needed.
+        [xml]$report = Get-Content -Path $ReportPath -Raw
+        foreach ($case in @($report.testsuite.testcase)) {
+            if (-not $case.failure) { continue }
+            foreach ($line in ($case.failure -split "`r?`n")) {
+                if ($line -match '^(Fatal error|Error) ') {
+                    $escaped = $line -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+                    Write-Host "::error title=CODESYS compile::$escaped"
+                }
+            }
+        }
+    }
 } else {
     Write-Warning "No report generated at $ReportPath"
 }
